@@ -1,0 +1,7 @@
+#if defined(CSQC)
+	#pragma progs_dat "../../game/saturn/csprogs.dat"
+#elif defined(SSQC)
+	#pragma progs_dat "../../game/saturn/progs.dat"
+#elif defined(MENU)
+	#pragma progs_dat "../../game/saturn/menu.dat"
+#endif

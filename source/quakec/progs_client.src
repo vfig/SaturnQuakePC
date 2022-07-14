@@ -1,0 +1,14 @@
+#pragma target fte
+
+#define CSQC
+
+#include "definitions.src"
+
+#includelist
+	// shared
+	shared/fteextensions.qc
+	shared/defs.qc
+
+	// setup
+	client/builtins.qc
+#endlist
