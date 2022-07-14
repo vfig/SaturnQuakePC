@@ -215,11 +215,11 @@ types:
   tilesubvector:
     seq:
       - id: x
-        type: b32
+        type: s4be
       - id: y
-        type: b32
+        type: s4be
       - id: z
-        type: b32
+        type: s4be
 
   tilecolordata:
     seq:

@@ -351,9 +351,9 @@ class Qslev(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.x = self._io.read_bits_int_be(32)
-            self.y = self._io.read_bits_int_be(32)
-            self.z = self._io.read_bits_int_be(32)
+            self.x = self._io.read_s4be()
+            self.y = self._io.read_s4be()
+            self.z = self._io.read_s4be()
 
 
     class Vec4u2(KaitaiStruct):
