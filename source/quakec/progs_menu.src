@@ -1,0 +1,14 @@
+#pragma target fte
+
+#define MENU
+
+#include "definitions.src"
+
+#includelist
+	// shared
+	shared/fteextensions.qc
+	shared/defs.qc
+
+	// setup
+	menu/builtins.qc
+#endlist

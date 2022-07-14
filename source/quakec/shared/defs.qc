@@ -114,3 +114,9 @@ float(float value, float minValue, float maxValue) clamp =
 
 	return value;
 };
+
+#if defined(MENU)
+	string loading_bg;
+	vector display_pos;
+	vector display_size;
+#endif
