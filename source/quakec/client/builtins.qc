@@ -9,6 +9,14 @@ vector dsize;
 string cprint_msg;
 float cprint_timer;
 
+// loading bar
+float lbar_width;
+vector lbar_size; // 124 x 12
+vector lbar_pos;
+vector lbar_color = [1, 0, 0];
+
+string loading_bg = "gfx/loading_screens/qload.png";
+
 void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 {
 	clearscene();
@@ -54,9 +62,28 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 	}
 };
 
+void(float vwidth, float vheight, float notmenu) CSQC_UpdateViewLoading =
+{
+	dpos = CalculateDisplayPos([vwidth, vheight], aspect_fullscreen);
+	dsize = CalculateDisplaySize([vwidth, vheight], aspect_fullscreen);
+
+	// bg
+	drawfill([0, 0], [vwidth, vheight], [0, 0, 0], 1);
+	drawpic(dpos, loading_bg, dsize, [1, 1, 1], 1);
+
+	// fake loading bar
+	lbar_size = [dsize[0] * 0.3875, dsize[1] * 0.05];
+	lbar_pos = [dpos[0] + dsize[0] * 0.30625, dpos[1] + dsize[1] * 0.85];
+
+	lbar_width += 8;
+	lbar_width = bound(0, lbar_width, lbar_size[0]);
+
+	drawfill(lbar_pos, [lbar_width, lbar_size[1]], lbar_color, 1);
+};
+
 void(float apilevel, string enginename, float engineversion) CSQC_Init =
 {
-	localcmd("menu_cmd reset_loadingbar\n");
+	lbar_width = 0;
 };
 
 float(string msg) CSQC_Parse_CenterPrint =
