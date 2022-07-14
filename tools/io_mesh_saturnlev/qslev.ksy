@@ -58,8 +58,8 @@ seq:
     size: 128
     repeat: expr
     repeat-expr: header.unknowncount
-  #- id: tabledata1
-  #  type: tabledata1_t
+  - id: tabledata1
+    type: tabledata1_t
   #- id: palettesize
   #  type: u4
 

@@ -58,16 +58,17 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bExtractTextures : BoolProperty(name="Extract Textures", default=False)
 	bExtractEntities : BoolProperty(name="Extract Entities", default=False)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
+	bImportNodes : BoolProperty(name="Import Node Data", default=False)
 	ImportScale : FloatProperty(name="Import Scale", default=0.25)
 
 	def execute(self, context):
-		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation)
+		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes)
 		return {'FINISHED'}
 
 def menu_func(self, context):
 	self.layout.operator(ImportLEV.bl_idname, text="Quake Sega Saturn Level (.lev)")
 
-def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation):
+def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes):
 	print("Reading %s..." % filepath)
 
 	name = bpy.path.basename(filepath)
@@ -83,20 +84,18 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	print("Tiles: %i" % lev.header.tileentrycount)
 
 	lev_saturncolors = [
-				[-16,-16,-16], [-16,-15,-15], [-15,-14,-14],
-				[-14,-13,-13], [-13,-12,-12], [-12,-11,-11],
-				[-11,-10,-10], [-10,-9,-9],   [-9,-8,-8],
-				[-8,-7,-7],	[-7,-6,-6],	[-6,-5,-5],
-				[-5,-4,-4],	[-4,-3,-3],	[-3,-2,-2],
-				[-2,-1,-1],	[-1,0,0],	  [0,0,0]
+				[-16,-16,-16],	[-16,-15,-15],	[-15,-14,-14],
+				[-14,-13,-13],	[-13,-12,-12],	[-12,-11,-11],
+				[-11,-10,-10],	[-10,-9,-9],	[-9,-8,-8],
+				[-8,-7,-7],		[-7,-6,-6],		[-6,-5,-5],
+				[-5,-4,-4],		[-4,-3,-3],		[-3,-2,-2],
+				[-2,-1,-1],		[-1,0,0],		[0,0,0]
 	]
 
 	lev_verts = []
 	lev_vertcolorvalues = []
 	lev_quads = []
-
-	lev_tile_verts = []
-	lev_tile_quads = []
+	lev_quads_uvdata = []
 
 	for lev.VertT in lev.verts:
 		lev_verts.append([lev.VertT.position.x, lev.VertT.position.y, lev.VertT.position.z])
@@ -113,6 +112,39 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 		def __call__(self, values):
 			return values / (2.0**self.n_frac)
+
+	if (bImportNodes):
+		for lev.NodeT in lev.nodes:
+			node = lev.NodeT
+			lev_node_verts = []
+			lev_node_quads = []
+
+			for x in range(node.lastplane - node.firstplane + 1):
+				plane = lev.planes[node.firstplane + x]
+				v0 = lev_verts[plane.vertices.x]
+				v1 = lev_verts[plane.vertices.y]
+				v2 = lev_verts[plane.vertices.z]
+				v3 = lev_verts[plane.vertices.a]
+
+				ofs = len(lev_node_verts)
+
+				lev_node_verts.append(v0)
+				lev_node_verts.append(v1)
+				lev_node_verts.append(v2)
+				lev_node_verts.append(v3)
+
+				lev_node_quads.append([ofs, ofs + 1, ofs + 2, ofs + 3])
+
+			mesh_node = bpy.data.meshes.new("Node")
+			mesh_node.from_pydata(lev_node_verts, [], lev_node_quads)
+			mesh_node.update()
+
+			obj_node = bpy.data.objects.new("Node", mesh_node)
+			obj_node.scale = [ImportScale, ImportScale, ImportScale]
+			if (bFixRotation):
+				obj_node.rotation_euler = [math.radians(90), 0, 0]
+
+			scene.collection.objects.link(obj_node)
 
 	for lev.PlaneT in lev.planes:
 		plane = lev.PlaneT
@@ -163,6 +195,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	mesh_quads = bpy.data.meshes.new(name)
 	mesh_quads.from_pydata(lev_verts, [], lev_quads)
 	mesh_quads.vertex_colors.new()
+	mesh_quads.uv_layers.new()
 	mesh_quads.update()
 
 	#mesh_tiles = bpy.data.meshes.new(name + " tiles")
@@ -178,6 +211,12 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	# print(color)
 
 	vertex_map = defaultdict(list)
+
+	# turns out we don't even need this, since just creating a blank UV layer maps all the quads the same as saturn hardware...
+	#for face in mesh_quads.polygons:
+	#	for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+	#		uv_coords = mesh_quads.uv_layers.active.data[loop_idx].uv
+	#		print("face idx: %i, vert idx: %i, uvs: %f, %f" % (face.index, vert_idx, uv_coords.x, uv_coords.y))
 
 	for poly in mesh_quads.polygons:
 		for vert_static_index, vert_loop_index in zip(poly.vertices, poly.loop_indices):
