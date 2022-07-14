@@ -1,0 +1,4 @@
+name "Sega Saturn Quake"
+basedir id1
+gamedir saturn
+disablehomedir 1

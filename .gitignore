@@ -1,0 +1,26 @@
+#
+# local stuff
+#
+
+/_local/
+
+#
+# specific folders and files that shouldn't be on the git
+#
+
+/game/id1/
+/game/*.bat
+/game/*.dll
+/game/*.lst
+/game/conhistory.txt
+/game/**/fte.cfg
+/game/**/*.sav
+/game/**/*.lno
+/game/**/csqccore.txt
+/game/**/saves/
+/game/**/screen_recording.mp4
+/game/**/screenshots/
+/game/**/ssqccore.txt
+/game/**/video/
+/game/**/data/
+/game/maptimes.txt

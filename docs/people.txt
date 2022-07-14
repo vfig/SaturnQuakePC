@@ -1,0 +1,49 @@
+Personnel:
+-------------------
+Brian McNeely - Project Lead
+Scott Branston - Music
+Troy Jacobson - 3D Consultation
+Willian Vallieres - 3D Consultation
+Tom Kristensen - Additional Art
+Paul Knutzen - Level Design
+Kevin Chung - 3D Engine
+John Yuill - Additional Art
+Dominick Meissner - 3D Consultation
+Patrick Schreiber - Additional Art
+Paul Lange - Project Manager
+Paul Haugerud - Programming
+John Van Deusen - Level Design
+Jeff Blazier - 3D Consultation
+David Lawson - BREW
+Paul Schreiber - 2D/3D Art
+Mark Coates - Game Design
+Ezra Dreisbach - 2D/3D Art
+
+segaretro.org Credits:
+-------------------
+Executive Producers: Paul Lange, Brian McNeely
+Project Manager: Mark Coates
+Game Re-Design: Mark Coates, Paul Knutzen
+Level Design: Paul Knutzen
+Programming Lead: Paul Haugerud
+Programming Team: Paul Haugerud, Paul Schreiber, Ezra Dreisbach
+2D/3D Artists: Kevin Chung, Eric Klokstad
+3D Engine: Ezra Dreisbach
+Sound Effects Editing: Scott Branston
+Development Tools: David Lawson (BREW), Paul Schreiber (PeepShow), John Yuill (YuillSoftener)
+Quality Assurance: Tom Kristensen
+Additional Programming: Patrick Schreiber, John Yuill
+Additional Art: John Van Deusen
+Additional Level Re-Design: Eric Klokstad, Mark Coates, Kevin Chung, Scott Branston
+3D Graphic/Animation Consultants: Puddletown Graphics
+Special Thanks To: Marjacq Micro Ltd., Mark Maslowicz, Dan Jevons, Manny Granillo, Richard Leadbetter, Lloyd 'Big Mac' Kinoshita, Randy Reeves, Eric Wilson
+
+Interviews:
+-------------------
+2004-08-10 - Ezra Dreisbach - https://forum.beyond3d.com/threads/interview-ezra-dreisbach-saturn-ps1-and-stuff.12568/
+2015-09-03 - Brian McNeely - https://www.unseen64.net/2015/03/09/interview-brian-mcneely-lobotomy-software/
+
+
+Miscellaneous:
+-------------------
+http://www.whipassgaming.com/genesisreviews/powerslave/lobotomy.html
