@@ -54,14 +54,28 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 	}
 };
 
+void(float apilevel, string enginename, float engineversion) CSQC_Init =
+{
+	localcmd("menu_cmd reset_loadingbar\n");
+};
+
 float(string msg) CSQC_Parse_CenterPrint =
 {
 	if (cvar("r_saturnmode") != 0)
 	{
 		cprint_msg = msg;
-		cprint_timer = time + 3;
+		cprint_timer = time + 5;
 		return TRUE;
 	}
 	else
 		return FALSE;
+};
+
+void(string printmsg, float printlvl) CSQC_Parse_Print =
+{
+	if (cvar("r_saturnmode") != 0)
+	{
+		cprint_msg = printmsg;
+		cprint_timer = time + 5;
+	}
 };

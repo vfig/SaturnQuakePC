@@ -116,7 +116,7 @@ float(float value, float minValue, float maxValue) clamp =
 };
 
 #if defined(MENU)
-	string loading_bg;
+	string loading_bg = "gfx/loading_screens/qload.png";
 	vector display_pos;
 	vector display_size;
 #endif
