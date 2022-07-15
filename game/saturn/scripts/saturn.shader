@@ -1,7 +1,8 @@
 gfx/unspecified
 {
 	program saturn_level
-	diffusemap textures/grey.png
+	diffusemap textures/grid.png
+	cull disable
 }
 
 saturn_water
