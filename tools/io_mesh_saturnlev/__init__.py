@@ -59,7 +59,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bExtractEntities : BoolProperty(name="Extract Entities", default=False)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
-	ImportScale : FloatProperty(name="Import Scale", default=0.25)
+	ImportScale : FloatProperty(name="Import Scale", default=1.0)
 
 	def execute(self, context):
 		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes)
@@ -95,7 +95,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	lev_verts = []
 	lev_vertcolorvalues = []
 	lev_quads = []
-	lev_quads_uvdata = []
+	lev_quads_flags = []
 
 	for lev.VertT in lev.verts:
 		lev_verts.append([lev.VertT.position.x, lev.VertT.position.y, lev.VertT.position.z])
@@ -140,7 +140,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			mesh_node.update()
 
 			obj_node = bpy.data.objects.new("Node", mesh_node)
-			obj_node.scale = [ImportScale, ImportScale, ImportScale]
+			obj_node.scale = [-ImportScale, ImportScale, ImportScale]
 			if (bFixRotation):
 				obj_node.rotation_euler = [math.radians(90), 0, 0]
 
@@ -157,7 +157,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			for tileY in range(tile.height):
 				for tileX in range(tile.width):
 					horiz = ((Y - X) / tile.width)
-					vert = ((Z - Y) / tile.height)
+					vert = ((A - X) / tile.height)
 
 					t0 = X + (horiz * tileX) + (vert * tileY)
 					t1 = t0 + horiz
@@ -183,6 +183,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 					lev_vertcolorvalues.append(t2_color)
 					lev_vertcolorvalues.append(t3_color)
 					lev_quads.append([ofs, ofs + 1, ofs + 2, ofs + 3])
+					lev_quads_flags.append(plane.flags)
 			#lev_quads.append([lev.PlaneT.vertices.x, lev.PlaneT.vertices.y, lev.PlaneT.vertices.z, lev.PlaneT.vertices.a])
 		elif plane.quadstartindex < lev.header.quadcount:
 			for i in range(plane.quadendindex - plane.quadstartindex + 1):
@@ -191,6 +192,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 				z = lev.quads[plane.quadstartindex + i].indices.z + plane.vertstartindex
 				a = lev.quads[plane.quadstartindex + i].indices.a + plane.vertstartindex
 				lev_quads.append([x, y, z, a])
+				lev_quads_flags.append(plane.flags)
 
 	mesh_quads = bpy.data.meshes.new(name)
 	mesh_quads.from_pydata(lev_verts, [], lev_quads)
@@ -218,7 +220,11 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	#		uv_coords = mesh_quads.uv_layers.active.data[loop_idx].uv
 	#		print("face idx: %i, vert idx: %i, uvs: %f, %f" % (face.index, vert_idx, uv_coords.x, uv_coords.y))
 
+	layer_flags = mesh_quads.polygon_layers_float.new(name="Source Plane Flags")
+	layer_collisionflags = mesh_quads.polygon_layers_float.new(name="Source Plane Collision Flags")
+
 	for poly in mesh_quads.polygons:
+		layer_flags.data[poly.index].value = lev_quads_flags[poly.index]
 		for vert_static_index, vert_loop_index in zip(poly.vertices, poly.loop_indices):
 			vertex_map[vert_static_index].append(vert_loop_index)
 
@@ -231,8 +237,8 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	obj_quads = bpy.data.objects.new(name, mesh_quads)
 	#obj_tiles = bpy.data.objects.new(name + " tiles", mesh_tiles)
 
-	obj_quads.scale = [ImportScale, ImportScale, ImportScale]
-	#obj_tiles.scale = [ImportScale, ImportScale, ImportScale]
+	obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
+	#obj_tiles.scale = [-ImportScale, ImportScale, ImportScale]
 
 	if (bFixRotation):
 		obj_quads.rotation_euler = [math.radians(90), 0, 0]
