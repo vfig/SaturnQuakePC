@@ -98,7 +98,7 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 
 		if (activeweapon == IT_AXE)
 		{
-			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/axe_idle01a.png";
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/axe_idle01.png";
 			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/axe_swing01a.png";
 			if (activeweaponframe == 2) weapon_viewsprite = "gfx/weapons/axe_swing01b.png";
 			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/axe_swing01c.png";
@@ -106,15 +106,62 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/axe_swing02a.png";
 			if (activeweaponframe == 6) weapon_viewsprite = "gfx/weapons/axe_swing02b.png";
 			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/axe_swing02c.png";
-			if (activeweaponframe == 8) weapon_viewsprite = "gfx/weapons/axe_idle01a.png";
+			if (activeweaponframe == 8) weapon_viewsprite = "gfx/weapons/axe_idle01.png";
 		}
 		else if (activeweapon == IT_SHOTGUN)
 		{
-			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/shotgun_idle01a.png";
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/shotgun_idle01.png";
 			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/shotgun_shoot01a.png";
 			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/shotgun_shoot01b.png";
 			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/shotgun_shoot01c.png";
 			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/shotgun_shoot01d.png";
+		}
+		else if (activeweapon == IT_SUPER_SHOTGUN)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/ssg_idle01.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/ssg_shoot01a.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/ssg_shoot01b.png";
+			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/ssg_idle01.png";
+		}
+		else if (activeweapon == IT_NAILGUN)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/ng_idle01.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/ng_shoot01_right.png";
+			if (activeweaponframe == 2) weapon_viewsprite = "gfx/weapons/ng_shoot01_left.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/ng_shoot01_right.png";
+			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/ng_shoot01_left.png";
+			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/ng_shoot01_right.png";
+			if (activeweaponframe == 6) weapon_viewsprite = "gfx/weapons/ng_shoot01_left.png";
+			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/ng_shoot01_right.png";
+			if (activeweaponframe == 8) weapon_viewsprite = "gfx/weapons/ng_shoot01_left.png";
+		}
+		else if (activeweapon == IT_SUPER_NAILGUN)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/sng_idle01.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/sng_shoot01_left.png";
+			if (activeweaponframe == 2) weapon_viewsprite = "gfx/weapons/sng_shoot01_up.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/sng_shoot01_right.png";
+			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/sng_spin01.png";
+			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/sng_shoot01_left.png";
+			if (activeweaponframe == 6) weapon_viewsprite = "gfx/weapons/sng_shoot01_up.png";
+			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/sng_shoot01_right.png";
+			if (activeweaponframe == 8) weapon_viewsprite = "gfx/weapons/sng_spin01.png";
+		}
+		else if (activeweapon == IT_GRENADE_LAUNCHER)
+		{
+			//if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/sng_idle01.png";
+		}
+		else if (activeweapon == IT_ROCKET_LAUNCHER)
+		{
+			//if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/sng_idle01.png";
+		}
+		else if (activeweapon == IT_LIGHTNING)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/lightning_idle01.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/lightning_shoot01a.png";
+			if (activeweaponframe == 2) weapon_viewsprite = "gfx/weapons/lightning_shoot01b.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/lightning_shoot01c.png";
+			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/lightning_shoot01d.png";
 		}
 
 		drawpic(weapon_viewsprite_pos, weapon_viewsprite, weapon_viewsprite_size, [1, 1, 1], 1);
