@@ -27,9 +27,20 @@ string hud_sbar = "gfx/sbar";
 string hud_ibar = "gfx/ibar";
 string hud_scorebar = "gfx/scorebar";
 
+string hud_ranking = "gfx/ranking.lmp";
+string hud_complete = "gfx/complete.lmp";
+string hud_intermission = "gfx/inter.lmp";
+string hud_finale = "gfx/finale.lmp";
+
 vector hud_sbar_pos = [0, 216];
 vector hud_ibar_pos = [0, 192];
 vector hud_sbar_size = [320, 24];
+vector hud_ibar_size = [320, 24];
+
+vector hud_ranking_size = [168, 24];
+vector hud_complete_size = [192, 24];
+vector hud_intermission_size = [160, 144];
+vector hud_finale_size = [288, 24];
 
 // adapted from V_CalcBob in the engine
 float() CalcViewBob =
@@ -67,10 +78,16 @@ float() CalcViewBob =
 
 void() DrawIntermission =
 {
-	
-	
-	
-	
+	setproperty(VF_DRAWCROSSHAIR, 0);
+	if (intermission == 1)
+	{
+		drawpic([0, 0], hud_intermission, hud_intermission_size, [1, 1, 1], 1);
+		drawpic([0, 0], hud_complete, hud_complete_size, [1, 1, 1], 1);
+	}
+	else if (intermission == 2)
+	{
+		drawpic([0, 0], hud_finale, hud_finale_size, [1, 1, 1], 1);
+	}
 };
 
 void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
@@ -203,13 +220,13 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 			drawpic(weapon_viewsprite_pos, weapon_viewsprite, weapon_viewsprite_size, [1, 1, 1], 1);
 
 			drawpic(hud_sbar_pos, hud_sbar, hud_sbar_size, [1, 1, 1], 1);
-			drawpic(hud_ibar_pos, hud_ibar, hud_sbar_size, [1, 1, 1], 1);
+			drawpic(hud_ibar_pos, hud_ibar, hud_ibar_size, [1, 1, 1], 1);
 			
 			setproperty(VF_DRAWCROSSHAIR, 1);
 		}
 		else
 		{
-			setproperty(VF_DRAWCROSSHAIR, 0);
+			DrawIntermission();
 		}
 
 		setviewprop(VF_RT_DESTCOLOUR, (string)__NULL__);
