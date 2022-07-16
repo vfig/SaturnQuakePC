@@ -517,10 +517,10 @@ class Qslev(KaitaiStruct):
             self.width = self._io.read_u1()
             self.height = self._io.read_u1()
             self.colordataofs = self._io.read_u2be()
+            self.unknown = self._io.read_u2be()
             self.tilehorizvec = Qslev.Vec3s4(self._io, self, self._root)
             self.tilevertvec = Qslev.Vec3s4(self._io, self, self._root)
             self.tilebasevec = Qslev.Vec3s4(self._io, self, self._root)
-            self.unknown = self._io.read_u2be()
 
         @property
         def getcolordata(self):
