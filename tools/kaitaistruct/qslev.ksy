@@ -60,8 +60,10 @@ seq:
     repeat-expr: header.unknowncount
   - id: tabledata1
     type: tabledata1_t
-  - id: palette
-    size: 1028
+  - id: global_palette
+    type: global_palette_t
+  - id: texturedata
+    type: texturedata_t
 
 types:
   # 131104 bytes
@@ -352,6 +354,8 @@ types:
 
   tabledata1_t:
     seq:
+      - id: prefixblock
+        type: tabledata1prefixblock
       - id: num_block
         type: s4
       - id: block
@@ -359,9 +363,18 @@ types:
         repeat: expr
         repeat-expr: num_block
 
+  tabledata1prefixblock:
+    seq:
+      - id: num_values
+        type: u4
+      - id: values
+        type: s2
+        repeat: expr
+        repeat-expr: num_values
+
   tabledata1block:
     seq:
-      - id: attr1
+      - id: len_block
         type: s4
       - id: attr2
         type: s4
@@ -369,19 +382,42 @@ types:
         type: s4
       - id: attr4
         type: s4
+      - id: block
+        size: len_block
 
-  textures:
+  global_palette_t:
+    seq:
+      - id: len_block
+        type: u4
+      - id: color
+        type: u2
+        repeat: expr
+        repeat-expr: len_block/2
+
+  texturedata_t:
+    seq:
+      - id: count
+        type: u4
+      - id: textures
+        type: texture_t
+        repeat: expr
+        repeat-expr: 58 # this is wrong!
+        # TITLE.LEV has 58 textures but the raw 'count' is 0x52 (82)
+        # E1L1.LEV has 120 textures but the raw 'count' is 0x93 (147)
+        # i dont know how to automatically determine number of textures yet!
+
+  texture_t:
     seq:
       - id: flags
-        type: u2
+        type: u1
       - id: type
-        type: u2
+        type: u1
       - id: palette
-        type: u4
+        type: u2
         repeat: expr
         repeat-expr: 16
       - id: imagedata
-        type: u2
+        type: u1
         repeat: expr
         repeat-expr: 2048
 

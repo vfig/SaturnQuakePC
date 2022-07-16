@@ -67,6 +67,8 @@ class Qslev(KaitaiStruct):
             self.unknown.append(self._io.read_bytes(128))
 
         self.tabledata1 = Qslev.Tabledata1T(self._io, self, self._root)
+        self.global_palette = Qslev.GlobalPaletteT(self._io, self, self._root)
+        self.texturedata = Qslev.TexturedataT(self._io, self, self._root)
 
     class Ent12(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -91,6 +93,21 @@ class Qslev(KaitaiStruct):
 
         def _read(self):
             self.data = self._io.read_bytes(self._parent.header.tilecolordatasize)
+
+
+    class GlobalPaletteT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.len_block = self._io.read_u4be()
+            self.color = []
+            for i in range(self.len_block // 2):
+                self.color.append(self._io.read_u2be())
+
 
 
     class VertT(KaitaiStruct):
@@ -260,10 +277,11 @@ class Qslev(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.attr1 = self._io.read_s4be()
+            self.len_block = self._io.read_s4be()
             self.attr2 = self._io.read_s4be()
             self.attr3 = self._io.read_s4be()
             self.attr4 = self._io.read_s4be()
+            self.block = self._io.read_bytes(self.len_block)
 
 
     class Vec3u2(KaitaiStruct):
@@ -344,6 +362,26 @@ class Qslev(KaitaiStruct):
             self.textureindex = self._io.read_u1()
 
 
+    class TextureT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.flags = self._io.read_u1()
+            self.type = self._io.read_u1()
+            self.palette = []
+            for i in range(16):
+                self.palette.append(self._io.read_u2be())
+
+            self.imagedata = []
+            for i in range(2048):
+                self.imagedata.append(self._io.read_u1())
+
+
+
     class Tilesubvector(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -369,6 +407,21 @@ class Qslev(KaitaiStruct):
             self.y = self._io.read_u2be()
             self.z = self._io.read_u2be()
             self.a = self._io.read_u2be()
+
+
+    class Tabledata1prefixblock(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.num_values = self._io.read_u4be()
+            self.values = []
+            for i in range(self.num_values):
+                self.values.append(self._io.read_s2be())
+
 
 
     class Ent10(KaitaiStruct):
@@ -450,6 +503,7 @@ class Qslev(KaitaiStruct):
             self._read()
 
         def _read(self):
+            self.prefixblock = Qslev.Tabledata1prefixblock(self._io, self, self._root)
             self.num_block = self._io.read_s4be()
             self.block = []
             for i in range(self.num_block):
@@ -482,26 +536,6 @@ class Qslev(KaitaiStruct):
             self.data = []
             for i in range(18):
                 self.data.append(self._io.read_s1())
-
-
-
-    class Textures(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.flags = self._io.read_u2be()
-            self.type = self._io.read_u2be()
-            self.palette = []
-            for i in range(16):
-                self.palette.append(self._io.read_u4be())
-
-            self.imagedata = []
-            for i in range(2048):
-                self.imagedata.append(self._io.read_u2be())
 
 
 
@@ -600,6 +634,21 @@ class Qslev(KaitaiStruct):
             self.plane = Qslev.Vec4s2(self._io, self, self._root)
             self.angle = self._io.read_s2be()
             self.resv = Qslev.Vec2u2(self._io, self, self._root)
+
+
+    class TexturedataT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.count = self._io.read_u4be()
+            self.textures = []
+            for i in range(58):
+                self.textures.append(Qslev.TextureT(self._io, self, self._root))
+
 
 
     class Vec3s2(KaitaiStruct):
