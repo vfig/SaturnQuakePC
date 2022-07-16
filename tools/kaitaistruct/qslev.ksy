@@ -196,14 +196,14 @@ types:
         type: u1
       - id: colordataofs
         type: u2
+      - id: unknown
+        type: u2
       - id: tilehorizvec
         type: vec3s4
       - id: tilevertvec
         type: vec3s4
       - id: tilebasevec
         type: vec3s4
-      - id: unknown
-        type: u2
     instances:
       getcolordata:
         io: _root.tilecolordata._io

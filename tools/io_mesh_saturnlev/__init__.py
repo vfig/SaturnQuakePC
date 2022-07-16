@@ -17,7 +17,7 @@ import bmesh
 from mathutils import *
 
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, CollectionProperty, BoolProperty, EnumProperty, FloatProperty
+from bpy.props import StringProperty, CollectionProperty, BoolProperty, EnumProperty, FloatProperty, IntProperty
 
 # bl_info
 bl_info = {
@@ -62,18 +62,32 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
 	ImportScale : FloatProperty(name="Import Scale", default=0.25)
 
+	debug_planes : BoolProperty(name="DEBUG: show planes with tiles", default=False)
+	debug_plane_index : IntProperty(name="DEBUG: show only this specific plane index", default=-1)
+
 	def execute(self, context):
-		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes)
+		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes, self.debug_planes, self.debug_plane_index)
 		return {'FINISHED'}
 
 def menu_func(self, context):
 	self.layout.operator(ImportLEV.bl_idname, text="Quake Sega Saturn Level (.lev)")
 
-def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes):
+def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes, debug_planes, debug_plane_index):
 	print("Reading %s..." % filepath)
 
 	name = bpy.path.basename(filepath)
 	scene = bpy.context.scene
+
+	debug_mat_fix = Matrix.Identity(4)
+	if bFixRotation:
+		# Because the empties (and the planes as I am constructing them) do not
+		# have their origin at zero, we cant just throw the same rotate-and-
+		# flip-x approach to fixing the rotation as elsewhere. So instead for
+		# those we use this matrix which does the same thing.
+		debug_mat_fix[0] = [-1.0, 0.0, 0.0, 0.0]
+		debug_mat_fix[1] = [ 0.0, 0.0,-1.0, 0.0]
+		debug_mat_fix[2] = [ 0.0, 1.0, 0.0, 0.0]
+		debug_mat_fix[3] = [ 0.0, 0.0, 0.0, 1.0]
 
 	lev = Qslev.from_file(filepath)
 
@@ -97,9 +111,6 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	lev_vertcolorvalues = []
 	lev_quads = []
 	lev_quads_flags = []
-
-	lev_tiles_verts = []
-	lev_tiles_quads = []
 
 	for lev.VertT in lev.verts:
 		lev_verts.append([lev.VertT.position.x, lev.VertT.position.y, lev.VertT.position.z])
@@ -144,44 +155,101 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			mesh_node.update()
 
 			obj_node = bpy.data.objects.new("Node", mesh_node)
-			obj_node.scale = [-ImportScale, ImportScale, ImportScale]
 			if (bFixRotation):
+				obj_node.scale = [-ImportScale, ImportScale, ImportScale]
 				obj_node.rotation_euler = [math.radians(90), 0, 0]
+			else:
+				obj_node.scale = [ImportScale, ImportScale, ImportScale]
 
 			scene.collection.objects.link(obj_node)
 
-	def add_empty(pos):
-		empty = bpy.data.objects.new("empty", None)
-		empty.location = pos
+	def debug_add_empty(pos, name):
+		empty = bpy.data.objects.new(name, None)
+		empty.location = debug_mat_fix@Vector(pos)
 		empty.empty_display_size = 2
 		empty.empty_display_type = "PLAIN_AXES"
+		empty.show_name = True
 		bpy.context.scene.collection.objects.link(empty)
 
-	for lev.PlaneT in lev.planes:
+	def debug_add_plane_mesh(verts, name):
+		verts = [debug_mat_fix@Vector(v) for v in verts]
+		total = Vector((0.0,0.0,0.0))
+		for v in verts:
+			total += v
+		center = total/len(verts)
+		for i,v in enumerate(verts):
+			verts[i] = v-center
+		mesh = bpy.data.meshes.new(name)
+		mesh.from_pydata(verts, [], [(0,1,2,3)])
+		mesh.update()
+		obj = bpy.data.objects.new(name, mesh)
+		obj.show_name = True
+		obj.location = center
+		obj.display_type = 'WIRE'
+		bpy.context.scene.collection.objects.link(obj)
+
+	for plane_index,lev.PlaneT in enumerate(lev.planes):
 		plane = lev.PlaneT
 		if plane.tileindex < lev.header.tileentrycount:
 			tile = lev.tiles[plane.tileindex]
+			X = Vector(lev_verts[plane.vertices.x])
+			Y = Vector(lev_verts[plane.vertices.y])
+			Z = Vector(lev_verts[plane.vertices.z])
+			A = Vector(lev_verts[plane.vertices.a])
 
-			# thank u vfig
-			def decode_vector(v):
-				x0 = numpy.int16((v.x>>16)&0xFFFF)
-				x1 = numpy.int16(v.x&0xFFFF)
-				y0 = numpy.int16((v.y>>16)&0xFFFF)
-				y1 = numpy.int16(v.y&0xFFFF)
-				z0 = numpy.int16((v.z>>16)&0xFFFF)
-				z1 = numpy.int16(v.z&0xFFFF)
-				return Vector((float(x1), float(y1), float(z1)))
+			if plane_index==debug_plane_index:
+				debug_add_empty(X, "X")
+				debug_add_empty(Y, "Y")
+				debug_add_empty(Z, "Z")
+				debug_add_empty(A, "A")
+			elif debug_plane_index>=0:
+				continue
 
-			for tileY in range(tile.height):
-				for tileX in range(tile.width):
-					base = decode_vector(tile.tilebasevec)
-					horiz = decode_vector(tile.tilehorizvec)
-					vert = decode_vector(tile.tilevertvec)
+			def convert_int16_16_vector(v):
+				return Vector((
+					round(v[0]/65536.0),
+					round(v[1]/65536.0),
+					round(v[2]/65536.0)
+					))
 
-					tc0 = base + (vert * tileY) + (horiz * tileX)
-					tc1 = tc0 + horiz
-					tc2 = tc0 + horiz + vert
-					tc3 = tc0 + vert
+			width = tile.width
+			height = tile.height
+
+			for tileY in range(height):
+				for tileX in range(width):
+					tc0i = [
+						tile.tilebasevec.x + tileX*tile.tilehorizvec.x + tileY*tile.tilevertvec.x,
+						tile.tilebasevec.y + tileX*tile.tilehorizvec.y + tileY*tile.tilevertvec.y,
+						tile.tilebasevec.z + tileX*tile.tilehorizvec.z + tileY*tile.tilevertvec.z,
+						]
+					tc1i = [
+						tc0i[0] + tile.tilehorizvec.x,
+						tc0i[1] + tile.tilehorizvec.y,
+						tc0i[2] + tile.tilehorizvec.z,
+						]
+					tc2i = [
+						tc0i[0] + tile.tilehorizvec.x + tile.tilevertvec.x,
+						tc0i[1] + tile.tilehorizvec.y + tile.tilevertvec.y,
+						tc0i[2] + tile.tilehorizvec.z + tile.tilevertvec.z,
+						]
+					tc3i = [
+						tc0i[0] + tile.tilevertvec.x,
+						tc0i[1] + tile.tilevertvec.y,
+						tc0i[2] + tile.tilevertvec.z,
+						]
+					tc0 = convert_int16_16_vector(tc0i)
+					tc1 = convert_int16_16_vector(tc1i)
+					tc2 = convert_int16_16_vector(tc2i)
+					tc3 = convert_int16_16_vector(tc3i)
+
+					if plane_index==debug_plane_index and tileX==0 and tileY==0:
+						print(f"tc0: {tc0i} ; {tc0}")
+						print(f"tc1: {tc1i} ; {tc1}")
+						print(f"tc2: {tc2i} ; {tc2}")
+						print(f"tc3: {tc3i} ; {tc3}")
+						debug_add_empty(tc0, "origin")
+						debug_add_empty(tc1, "U")
+						debug_add_empty(tc3, "V")
 
 					points = tile.width + 1
 					colorbase = (tileY * points) + tileX
@@ -203,8 +271,10 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 					lev_vertcolorvalues.append(t3_color)
 					lev_quads.append([ofs, ofs + 1, ofs + 2, ofs + 3])
 					lev_quads_flags.append(plane.flags)
-
+			if debug_planes:
+				debug_add_plane_mesh([lev_verts[plane.vertices.x],lev_verts[plane.vertices.y],lev_verts[plane.vertices.z],lev_verts[plane.vertices.a]], f"Plane:{plane_index}, tile:{plane.tileindex}")
 			#lev_quads.append([lev.PlaneT.vertices.x, lev.PlaneT.vertices.y, lev.PlaneT.vertices.z, lev.PlaneT.vertices.a])
+		
 		if plane.quadstartindex < lev.header.quadcount:
 			for i in range(plane.quadendindex - plane.quadstartindex + 1):
 				x = lev.quads[plane.quadstartindex + i].indices.x + plane.vertstartindex
@@ -219,12 +289,6 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	mesh_quads.vertex_colors.new()
 	mesh_quads.uv_layers.new()
 	mesh_quads.update()
-
-	mesh_tiles = bpy.data.meshes.new(name + " tiles")
-	mesh_tiles.from_pydata(lev_tiles_verts, [], lev_tiles_quads)
-	mesh_tiles.vertex_colors.new()
-	mesh_tiles.uv_layers.new()
-	mesh_tiles.update()
 
 	# sort out vertex colors
 	# add 31 to make them positive, and then divide by 31 to map them between 0 and 1
@@ -256,17 +320,14 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			mesh_quads.vertex_colors.active.data[vert_loop_index].color = color
 
 	obj_quads = bpy.data.objects.new(name, mesh_quads)
-	obj_tiles = bpy.data.objects.new(name + " tiles", mesh_tiles)
-
-	obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
-	obj_tiles.scale = [-ImportScale, ImportScale, ImportScale]
 
 	if (bFixRotation):
+		obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
 		obj_quads.rotation_euler = [math.radians(90), 0, 0]
-		obj_tiles.rotation_euler = [math.radians(90), 0, 0]
+	else:
+		obj_quads.scale = [ImportScale, ImportScale, ImportScale]
 
 	scene.collection.objects.link(obj_quads)
-	#scene.collection.objects.link(obj_tiles)
 
 	# textures
 
