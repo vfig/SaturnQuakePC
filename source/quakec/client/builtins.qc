@@ -17,11 +17,28 @@ vector lbar_color = [1, 0, 0];
 
 string loading_bg = "gfx/loading_screens/qload.png";
 
+// weapon viewsprite
+string weapon_viewsprite;
+vector weapon_viewsprite_pos;
+vector weapon_viewsprite_size;
+
+// status bar
+string hud_sbar = "gfx/sbar";
+string hud_ibar = "gfx/ibar";
+string hud_scorebar = "gfx/scorebar";
+
+vector hud_sbar_pos = [0, 216];
+vector hud_ibar_pos = [0, 192];
+vector hud_sbar_size = [320, 24];
+
 void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 {
 	clearscene();
 
 	iscale = 1;
+	
+	float activeweaponframe = getstatf(STAT_WEAPONFRAME);
+	float activeweapon = getstatf(STAT_ACTIVEWEAPON);
 
 	if (cvar("r_saturnmode") != 0)
 	{
@@ -37,23 +54,78 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 		setproperty(VF_VIEWPORT, [0, 0], isize);
 	}
 
-	setproperty(VF_DRAWENGINESBAR, 1);
-	setproperty(VF_DRAWCROSSHAIR, 1);
-	setproperty(VF_DRAWWORLD, 1);
 
-	addentities((intermission?0:MASK_VIEWMODEL)|MASK_ENGINE);
+	if (cvar("r_saturnmode") != 0)
+	{
+		setproperty(VF_DRAWENGINESBAR, 0);
+		setproperty(VF_DRAWCROSSHAIR, 1);
+		setproperty(VF_DRAWWORLD, 1);
+		addentities(MASK_ENGINE);
+	}
+	else
+	{
+		setproperty(VF_DRAWENGINESBAR, 1);
+		setproperty(VF_DRAWCROSSHAIR, 1);
+		setproperty(VF_DRAWWORLD, 1);
+		addentities((intermission?0:MASK_VIEWMODEL)|MASK_ENGINE);
+	}
 
 	renderscene();
+
+	// IT_AXE = 4096;
+	// IT_SHOTGUN = 1;
+	// IT_SUPER_SHOTGUN = 2;
+	// IT_NAILGUN = 4;
+	// IT_SUPER_NAILGUN = 8;
+	// IT_GRENADE_LAUNCHER = 16;
+	// IT_ROCKET_LAUNCHER = 32;
+	// IT_LIGHTNING = 64;
+	// IT_EXTRA_WEAPON = 128;
 
 	if (cvar("r_saturnmode") != 0)
 	{
 		if (cprint_timer > time)
 			drawtextfield([0, isize[1] / 4], isize, 2, cprint_msg);
 
+		weapon_viewsprite_size = [320, 240];
+		weapon_viewsprite_pos = [0, -48];
+
+		vector screensize = [vwidth * cvar("scr_conscale"), vheight * cvar("scr_conscale")];
+		int screensize_size = sizeof(screensize);
+		vector *screensize_pointer = &screensize;
+		
+		setproperty(VF_USERDATA, screensize_pointer, screensize_size);
+
+		if (activeweapon == IT_AXE)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/axe_idle01a.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/axe_swing01a.png";
+			if (activeweaponframe == 2) weapon_viewsprite = "gfx/weapons/axe_swing01b.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/axe_swing01c.png";
+			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/axe_swing01d.png";
+			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/axe_swing02a.png";
+			if (activeweaponframe == 6) weapon_viewsprite = "gfx/weapons/axe_swing02b.png";
+			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/axe_swing02c.png";
+			if (activeweaponframe == 8) weapon_viewsprite = "gfx/weapons/axe_idle01a.png";
+		}
+		else if (activeweapon == IT_SHOTGUN)
+		{
+			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/shotgun_idle01a.png";
+			if (activeweaponframe == 1) weapon_viewsprite = "gfx/weapons/shotgun_shoot01a.png";
+			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/shotgun_shoot01b.png";
+			if (activeweaponframe == 5) weapon_viewsprite = "gfx/weapons/shotgun_shoot01c.png";
+			if (activeweaponframe == 7) weapon_viewsprite = "gfx/weapons/shotgun_shoot01d.png";
+		}
+
+		drawpic(weapon_viewsprite_pos, weapon_viewsprite, weapon_viewsprite_size, [1, 1, 1], 1);
+
+		drawpic(hud_sbar_pos, hud_sbar, hud_sbar_size, [1, 1, 1], 1);
+		drawpic(hud_ibar_pos, hud_ibar, hud_sbar_size, [1, 1, 1], 1);
+
 		setviewprop(VF_RT_DESTCOLOUR, (string)__NULL__);
-		// disable postproc for now
-		//shaderforname("screenrtshader", "{\nprogram postproc\n{\nmap $rt:screenrt\nrgbgen vertex\n}\n}\n");
-		shaderforname("screenrtshader", "{\n{\nmap $rt:screenrt\nrgbgen vertex\n}\n}\n");
+		shaderforname("screenrtshader", "{\nprogram postproc\n{\nmap $rt:screenrt\nrgbgen vertex\n}\n}\n");
+		// version with no postproc
+		//shaderforname("screenrtshader", "{\n{\nmap $rt:screenrt\nrgbgen vertex\n}\n}\n");
 
 		dpos = CalculateDisplayPos([vwidth, vheight], aspect_fullscreen);
 		dsize = CalculateDisplaySize([vwidth, vheight], aspect_fullscreen);
