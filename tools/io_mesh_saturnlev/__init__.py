@@ -14,6 +14,7 @@ import math
 import numpy
 import bpy
 import bmesh
+from mathutils import *
 
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, CollectionProperty, BoolProperty, EnumProperty, FloatProperty
@@ -59,7 +60,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bExtractEntities : BoolProperty(name="Extract Entities", default=False)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
-	ImportScale : FloatProperty(name="Import Scale", default=1.0)
+	ImportScale : FloatProperty(name="Import Scale", default=0.25)
 
 	def execute(self, context):
 		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes)
@@ -96,6 +97,9 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	lev_vertcolorvalues = []
 	lev_quads = []
 	lev_quads_flags = []
+
+	lev_tiles_verts = []
+	lev_tiles_quads = []
 
 	for lev.VertT in lev.verts:
 		lev_verts.append([lev.VertT.position.x, lev.VertT.position.y, lev.VertT.position.z])
@@ -146,23 +150,38 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 			scene.collection.objects.link(obj_node)
 
+	def add_empty(pos):
+		empty = bpy.data.objects.new("empty", None)
+		empty.location = pos
+		empty.empty_display_size = 2
+		empty.empty_display_type = "PLAIN_AXES"
+		bpy.context.scene.collection.objects.link(empty)
+
 	for lev.PlaneT in lev.planes:
 		plane = lev.PlaneT
 		if plane.tileindex < lev.header.tileentrycount:
 			tile = lev.tiles[plane.tileindex]
-			X = numpy.array(lev_verts[lev.PlaneT.vertices.x])
-			Y = numpy.array(lev_verts[lev.PlaneT.vertices.y])
-			Z = numpy.array(lev_verts[lev.PlaneT.vertices.z])
-			A = numpy.array(lev_verts[lev.PlaneT.vertices.a])
+
+			# thank u vfig
+			def decode_vector(v):
+				x0 = numpy.int16((v.x>>16)&0xFFFF)
+				x1 = numpy.int16(v.x&0xFFFF)
+				y0 = numpy.int16((v.y>>16)&0xFFFF)
+				y1 = numpy.int16(v.y&0xFFFF)
+				z0 = numpy.int16((v.z>>16)&0xFFFF)
+				z1 = numpy.int16(v.z&0xFFFF)
+				return Vector((float(x1), float(y1), float(z1)))
+
 			for tileY in range(tile.height):
 				for tileX in range(tile.width):
-					horiz = ((Y - X) / tile.width)
-					vert = ((A - X) / tile.height)
+					base = decode_vector(tile.tilebasevec)
+					horiz = decode_vector(tile.tilehorizvec)
+					vert = decode_vector(tile.tilevertvec)
 
-					t0 = X + (horiz * tileX) + (vert * tileY)
-					t1 = t0 + horiz
-					t2 = t0 + horiz + vert
-					t3 = t0 + vert
+					tc0 = base + (vert * tileY) + (horiz * tileX)
+					tc1 = tc0 + horiz
+					tc2 = tc0 + horiz + vert
+					tc3 = tc0 + vert
 
 					points = tile.width + 1
 					colorbase = (tileY * points) + tileX
@@ -174,18 +193,19 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 					ofs = len(lev_verts)
 
-					lev_verts.append(t0)
-					lev_verts.append(t1)
-					lev_verts.append(t2)
-					lev_verts.append(t3)
+					lev_verts.append(tc0)
+					lev_verts.append(tc1)
+					lev_verts.append(tc2)
+					lev_verts.append(tc3)
 					lev_vertcolorvalues.append(t0_color)
 					lev_vertcolorvalues.append(t1_color)
 					lev_vertcolorvalues.append(t2_color)
 					lev_vertcolorvalues.append(t3_color)
 					lev_quads.append([ofs, ofs + 1, ofs + 2, ofs + 3])
 					lev_quads_flags.append(plane.flags)
+
 			#lev_quads.append([lev.PlaneT.vertices.x, lev.PlaneT.vertices.y, lev.PlaneT.vertices.z, lev.PlaneT.vertices.a])
-		elif plane.quadstartindex < lev.header.quadcount:
+		if plane.quadstartindex < lev.header.quadcount:
 			for i in range(plane.quadendindex - plane.quadstartindex + 1):
 				x = lev.quads[plane.quadstartindex + i].indices.x + plane.vertstartindex
 				y = lev.quads[plane.quadstartindex + i].indices.y + plane.vertstartindex
@@ -200,10 +220,11 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	mesh_quads.uv_layers.new()
 	mesh_quads.update()
 
-	#mesh_tiles = bpy.data.meshes.new(name + " tiles")
-	#mesh_tiles.from_pydata(lev_tile_verts, [], lev_tile_quads)
-	#mesh_tiles.vertex_colors.new()
-	#mesh_tiles.update()
+	mesh_tiles = bpy.data.meshes.new(name + " tiles")
+	mesh_tiles.from_pydata(lev_tiles_verts, [], lev_tiles_quads)
+	mesh_tiles.vertex_colors.new()
+	mesh_tiles.uv_layers.new()
+	mesh_tiles.update()
 
 	# sort out vertex colors
 	# add 31 to make them positive, and then divide by 31 to map them between 0 and 1
@@ -235,14 +256,14 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			mesh_quads.vertex_colors.active.data[vert_loop_index].color = color
 
 	obj_quads = bpy.data.objects.new(name, mesh_quads)
-	#obj_tiles = bpy.data.objects.new(name + " tiles", mesh_tiles)
+	obj_tiles = bpy.data.objects.new(name + " tiles", mesh_tiles)
 
 	obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
-	#obj_tiles.scale = [-ImportScale, ImportScale, ImportScale]
+	obj_tiles.scale = [-ImportScale, ImportScale, ImportScale]
 
 	if (bFixRotation):
 		obj_quads.rotation_euler = [math.radians(90), 0, 0]
-		#obj_tiles.rotation_euler = [math.radians(90), 0, 0]
+		obj_tiles.rotation_euler = [math.radians(90), 0, 0]
 
 	scene.collection.objects.link(obj_quads)
 	#scene.collection.objects.link(obj_tiles)
@@ -251,22 +272,18 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 	if (bExtractTextures):
 		# this code SUCKS
-		skypalettepixels = (
-			(lev.skydata.skypalette[0].r * 255 + 15) / 31, (lev.skydata.skypalette[0].g * 255 + 15) / 31, (lev.skydata.skypalette[0].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[1].r * 255 + 15) / 31, (lev.skydata.skypalette[1].g * 255 + 15) / 31, (lev.skydata.skypalette[1].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[2].r * 255 + 15) / 31, (lev.skydata.skypalette[2].g * 255 + 15) / 31, (lev.skydata.skypalette[2].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[3].r * 255 + 15) / 31, (lev.skydata.skypalette[3].g * 255 + 15) / 31, (lev.skydata.skypalette[3].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[4].r * 255 + 15) / 31, (lev.skydata.skypalette[4].g * 255 + 15) / 31, (lev.skydata.skypalette[4].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[5].r * 255 + 15) / 31, (lev.skydata.skypalette[5].g * 255 + 15) / 31, (lev.skydata.skypalette[5].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[6].r * 255 + 15) / 31, (lev.skydata.skypalette[6].g * 255 + 15) / 31, (lev.skydata.skypalette[6].b * 255 + 15) / 31, 255,
-			(lev.skydata.skypalette[7].r * 255 + 15) / 31, (lev.skydata.skypalette[7].g * 255 + 15) / 31, (lev.skydata.skypalette[7].b * 255 + 15) / 31, 255,
-		)
+		skypalettepixels = []
 
-		#print(skypalettepixels)
+		for i in range(16):
+			skypalettepixels.append(lev.skydata.skypalette[i].r * 0x1F // 0xFF)
+			skypalettepixels.append(lev.skydata.skypalette[i].g * 0x1F // 0xFF)
+			skypalettepixels.append(lev.skydata.skypalette[i].b * 0x1F // 0xFF)
+			skypalettepixels.append(lev.skydata.skypalette[i].a)
 
-		skypaletteimage = bpy.data.images.new("Sky Palette", alpha=True, width=8, height=2)
+		print(skypalettepixels)
+
+		skypaletteimage = bpy.data.images.new("Sky Palette", alpha=False, width=8, height=2)
 		skypaletteimage.pixels = skypalettepixels
-		skypaletteimage.alpha_mode = "STRAIGHT"
 		skypaletteimage.filepath_raw = filepath + ".skypalette.png"
 		skypaletteimage.file_format = "PNG"
 		skypaletteimage.update()

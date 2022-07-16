@@ -31,6 +31,48 @@ vector hud_sbar_pos = [0, 216];
 vector hud_ibar_pos = [0, 192];
 vector hud_sbar_size = [320, 24];
 
+// adapted from V_CalcBob in the engine
+float() CalcViewBob =
+{
+	float bob;
+	float cycle;
+
+	float mod = cvar("cl_bobcycle");
+	float up = cvar("cl_bobup");
+	float bobval = cvar("cl_bob");
+	float pi = 3.1415926535;
+	vector vel = pmove_vel / 1.5;
+	
+	if (mod <= 0)
+		return 0.0f;
+	
+	cycle = time - (int)(time / mod) * mod;
+	cycle /= mod;
+
+    if (cycle < up)
+        cycle = pi * cycle / up;
+    else
+        cycle = pi + pi * (cycle - up) / (1.0 - up);
+
+    bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * bobval;
+	bob = bob * 0.4 + bob * 0.7 * sin(cycle);
+
+	if (bob > 16)
+		bob = 16;
+	else if (bob < 0)
+		bob = 0;
+
+	return bob;
+};
+
+void() DrawIntermission =
+{
+	
+	
+	
+	
+};
+
 void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 {
 	clearscene();
@@ -42,8 +84,8 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 
 	if (cvar("r_saturnmode") != 0)
 	{
-		cvar_set("cl_sbar", "1");
-		cvar_set("r_viewmodel_quake", "0");
+		//cvar_set("cl_sbar", "1");
+		//cvar_set("r_viewmodel_quake", "0");
 
 		drawfontscale = [iscale, iscale, iscale];
 
@@ -54,11 +96,9 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 		setproperty(VF_VIEWPORT, [0, 0], isize);
 	}
 
-
 	if (cvar("r_saturnmode") != 0)
 	{
 		setproperty(VF_DRAWENGINESBAR, 0);
-		setproperty(VF_DRAWCROSSHAIR, 1);
 		setproperty(VF_DRAWWORLD, 1);
 		addentities(MASK_ENGINE);
 	}
@@ -72,28 +112,18 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 
 	renderscene();
 
-	// IT_AXE = 4096;
-	// IT_SHOTGUN = 1;
-	// IT_SUPER_SHOTGUN = 2;
-	// IT_NAILGUN = 4;
-	// IT_SUPER_NAILGUN = 8;
-	// IT_GRENADE_LAUNCHER = 16;
-	// IT_ROCKET_LAUNCHER = 32;
-	// IT_LIGHTNING = 64;
-	// IT_EXTRA_WEAPON = 128;
-
 	if (cvar("r_saturnmode") != 0)
 	{
 		if (cprint_timer > time)
 			drawtextfield([0, isize[1] / 4], isize, 2, cprint_msg);
 
 		weapon_viewsprite_size = [320, 240];
-		weapon_viewsprite_pos = [0, -48];
+		weapon_viewsprite_pos = [0, CalcViewBob() - 48];
 
 		vector screensize = [vwidth * cvar("scr_conscale"), vheight * cvar("scr_conscale")];
 		int screensize_size = sizeof(screensize);
 		vector *screensize_pointer = &screensize;
-		
+
 		setproperty(VF_USERDATA, screensize_pointer, screensize_size);
 
 		if (activeweapon == IT_AXE)
@@ -149,11 +179,11 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 		}
 		else if (activeweapon == IT_GRENADE_LAUNCHER)
 		{
-			//if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/sng_idle01.png";
+			weapon_viewsprite = "";
 		}
 		else if (activeweapon == IT_ROCKET_LAUNCHER)
 		{
-			//if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/sng_idle01.png";
+			weapon_viewsprite = "";
 		}
 		else if (activeweapon == IT_LIGHTNING)
 		{
@@ -163,11 +193,24 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 			if (activeweaponframe == 3) weapon_viewsprite = "gfx/weapons/lightning_shoot01c.png";
 			if (activeweaponframe == 4) weapon_viewsprite = "gfx/weapons/lightning_shoot01d.png";
 		}
+		else if (activeweapon == IT_EXTRA_WEAPON)
+		{
+			weapon_viewsprite = "";
+		}
 
-		drawpic(weapon_viewsprite_pos, weapon_viewsprite, weapon_viewsprite_size, [1, 1, 1], 1);
+		if (intermission == 0)
+		{
+			drawpic(weapon_viewsprite_pos, weapon_viewsprite, weapon_viewsprite_size, [1, 1, 1], 1);
 
-		drawpic(hud_sbar_pos, hud_sbar, hud_sbar_size, [1, 1, 1], 1);
-		drawpic(hud_ibar_pos, hud_ibar, hud_sbar_size, [1, 1, 1], 1);
+			drawpic(hud_sbar_pos, hud_sbar, hud_sbar_size, [1, 1, 1], 1);
+			drawpic(hud_ibar_pos, hud_ibar, hud_sbar_size, [1, 1, 1], 1);
+			
+			setproperty(VF_DRAWCROSSHAIR, 1);
+		}
+		else
+		{
+			setproperty(VF_DRAWCROSSHAIR, 0);
+		}
 
 		setviewprop(VF_RT_DESTCOLOUR, (string)__NULL__);
 		shaderforname("screenrtshader", "{\nprogram postproc\n{\nmap $rt:screenrt\nrgbgen vertex\n}\n}\n");

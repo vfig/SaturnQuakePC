@@ -60,8 +60,8 @@ seq:
     repeat-expr: header.unknowncount
   - id: tabledata1
     type: tabledata1_t
-  #- id: palettesize
-  #  type: u4
+  - id: palette
+    size: 1028
 
 types:
   # 131104 bytes
@@ -70,7 +70,7 @@ types:
       - id: skypalette
         type: skypaletteentry_t
         repeat: expr
-        repeat-expr: 8
+        repeat-expr: 16
       - id: skyimagedata
         type: skyimageentry_t
         repeat: expr

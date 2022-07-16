@@ -66,6 +66,7 @@ class Qslev(KaitaiStruct):
         for i in range(self.header.unknowncount):
             self.unknown.append(self._io.read_bytes(128))
 
+        self.tabledata1 = Qslev.Tabledata1T(self._io, self, self._root)
 
     class Ent12(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -393,7 +394,7 @@ class Qslev(KaitaiStruct):
 
         def _read(self):
             self.skypalette = []
-            for i in range(8):
+            for i in range(16):
                 self.skypalette.append(Qslev.SkypaletteentryT(self._io, self, self._root))
 
             self.skyimagedata = []
