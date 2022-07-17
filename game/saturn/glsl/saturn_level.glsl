@@ -17,8 +17,9 @@ void main ()
 #ifdef FRAGMENT_SHADER
 void main ()
 {
+	vec4 vclr = vc;
     vec4 col = texture2D(s_diffuse, tc);
-	col.rgb -= vec3(1.0) - vc.rgb;
+	col.rgb -= vec3(1.0) - vclr.rgb;
     gl_FragColor = col;
 }
 #endif

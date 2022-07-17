@@ -50,9 +50,10 @@ seq:
     type: entitydata
     size: header.entitydatasize
   - id: tiletexturedata
+    type: tiletexturedata_t
     size: header.tiletexturedatasize
   - id: tilecolordata
-    type: tilecolordata
+    type: tilecolordata_t
     size: header.tilecolordatasize
   - id: unknown
     size: 128
@@ -70,7 +71,7 @@ types:
   skyheader_t:
     seq:
       - id: skypalette
-        type: skypaletteentry_t
+        type: palette_entry_t
         repeat: expr
         repeat-expr: 16
       - id: skyimagedata
@@ -78,16 +79,16 @@ types:
         repeat: expr
         repeat-expr: 64
 
-  skypaletteentry_t:
+  palette_entry_t:
     seq:
-      - id: r
+      - id: a
+        type: b1
+      - id: b
         type: b5
       - id: g
         type: b5
-      - id: b
+      - id: r
         type: b5
-      - id: a
-        type: b1
 
   skyimageentry_t:
     seq:
@@ -213,6 +214,12 @@ types:
         type: u1
         repeat: expr
         repeat-expr: (width + 1) * (height + 1)
+      gettiletexturedata:
+        io: _root.tiletexturedata._io
+        pos: texturedataofs
+        type: u1
+        repeat: expr
+        repeat-expr: (height * width) * 2
 
   tilesubvector:
     seq:
@@ -223,10 +230,15 @@ types:
       - id: z
         type: s4be
 
-  tilecolordata:
+  tilecolordata_t:
     seq:
       - id: data
         size: _parent.header.tilecolordatasize
+
+  tiletexturedata_t:
+    seq:
+      - id: data
+        size: _parent.header.tiletexturedatasize
 
   # 8 bytes each
   vert_t:
@@ -390,7 +402,7 @@ types:
       - id: len_block
         type: u4
       - id: color
-        type: u2
+        type: palette_entry_t
         repeat: expr
         repeat-expr: len_block/2
 
@@ -400,8 +412,10 @@ types:
         type: u4
       - id: textures
         type: texture_t
-        repeat: expr
-        repeat-expr: 58 # this is wrong!
+        repeat: until
+        repeat-until: _.type != 130
+        #repeat: expr
+        #repeat-expr: 58 # this is wrong!
         # TITLE.LEV has 58 textures but the raw 'count' is 0x52 (82)
         # E1L1.LEV has 120 textures but the raw 'count' is 0x93 (147)
         # i dont know how to automatically determine number of textures yet!
@@ -413,13 +427,13 @@ types:
       - id: type
         type: u1
       - id: palette
-        type: u2
+        type: palette_entry_t
         repeat: expr
         repeat-expr: 16
       - id: imagedata
-        type: u1
+        type: b4
         repeat: expr
-        repeat-expr: 2048
+        repeat-expr: 4096
 
 # vector types
 

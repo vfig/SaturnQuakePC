@@ -56,7 +56,8 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	filter_folder : BoolProperty(name="Filter Folders", description="", default=True, options={'HIDDEN'})
 	filter_glob : StringProperty(default="*.lev", options={'HIDDEN'})
 
-	bExtractTextures : BoolProperty(name="Extract Textures", default=False)
+	bExtractTextures : BoolProperty(name="Extract Textures", default=True)
+	bExtractSkyTextures : BoolProperty(name="Extract Sky Textures", default=False)
 	bExtractEntities : BoolProperty(name="Extract Entities", default=False)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
@@ -66,13 +67,13 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	debug_plane_index : IntProperty(name="DEBUG: show only this specific plane index", default=-1)
 
 	def execute(self, context):
-		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes, self.debug_planes, self.debug_plane_index)
+		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes, self.debug_planes, self.debug_plane_index, self.bExtractSkyTextures)
 		return {'FINISHED'}
 
 def menu_func(self, context):
 	self.layout.operator(ImportLEV.bl_idname, text="Quake Sega Saturn Level (.lev)")
 
-def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes, debug_planes, debug_plane_index):
+def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes, debug_planes, debug_plane_index, bExtractSkyTextures):
 	print("Reading %s..." % filepath)
 
 	name = bpy.path.basename(filepath)
@@ -111,6 +112,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	lev_vertcolorvalues = []
 	lev_quads = []
 	lev_quads_flags = []
+	lev_materials = []
 
 	for lev.VertT in lev.verts:
 		lev_verts.append([lev.VertT.position.x, lev.VertT.position.y, lev.VertT.position.z])
@@ -120,13 +122,6 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		#lev_quads = range(lev.QuadT in lev.quads)
 		#lev_quads.append([0, 0, 0, 0])
 		#lev_quads.append([lev.QuadT.indices.x, lev.QuadT.indices.y, lev.QuadT.indices.z, lev.QuadT.indices.a])
-
-	class NumpyFixToFloatConverter(object):
-		def __init__(self, n_frac):
-			self.n_frac = n_frac
-
-		def __call__(self, values):
-			return values / (2.0**self.n_frac)
 
 	if (bImportNodes):
 		for lev.NodeT in lev.nodes:
@@ -169,7 +164,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		empty.empty_display_size = 2
 		empty.empty_display_type = "PLAIN_AXES"
 		empty.show_name = True
-		bpy.context.scene.collection.objects.link(empty)
+		scene.collection.objects.link(empty)
 
 	def debug_add_plane_mesh(verts, name):
 		verts = [debug_mat_fix@Vector(v) for v in verts]
@@ -186,9 +181,10 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		obj.show_name = True
 		obj.location = center
 		obj.display_type = 'WIRE'
-		bpy.context.scene.collection.objects.link(obj)
+		scene.collection.objects.link(obj)
 
-	for plane_index,lev.PlaneT in enumerate(lev.planes):
+	# thank you vfig
+	for plane_index, lev.PlaneT in enumerate(lev.planes):
 		plane = lev.PlaneT
 		if plane.tileindex < lev.header.tileentrycount:
 			tile = lev.tiles[plane.tileindex]
@@ -197,12 +193,12 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			Z = Vector(lev_verts[plane.vertices.z])
 			A = Vector(lev_verts[plane.vertices.a])
 
-			if plane_index==debug_plane_index:
+			if plane_index == debug_plane_index:
 				debug_add_empty(X, "X")
 				debug_add_empty(Y, "Y")
 				debug_add_empty(Z, "Z")
 				debug_add_empty(A, "A")
-			elif debug_plane_index>=0:
+			elif debug_plane_index >= 0:
 				continue
 
 			def convert_int16_16_vector(v):
@@ -275,12 +271,15 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 				debug_add_plane_mesh([lev_verts[plane.vertices.x],lev_verts[plane.vertices.y],lev_verts[plane.vertices.z],lev_verts[plane.vertices.a]], f"Plane:{plane_index}, tile:{plane.tileindex}")
 			#lev_quads.append([lev.PlaneT.vertices.x, lev.PlaneT.vertices.y, lev.PlaneT.vertices.z, lev.PlaneT.vertices.a])
 		
+	for lev.PlaneT in lev.planes:
+		plane = lev.PlaneT
 		if plane.quadstartindex < lev.header.quadcount:
 			for i in range(plane.quadendindex - plane.quadstartindex + 1):
-				x = lev.quads[plane.quadstartindex + i].indices.x + plane.vertstartindex
-				y = lev.quads[plane.quadstartindex + i].indices.y + plane.vertstartindex
-				z = lev.quads[plane.quadstartindex + i].indices.z + plane.vertstartindex
-				a = lev.quads[plane.quadstartindex + i].indices.a + plane.vertstartindex
+				quad = lev.quads[plane.quadstartindex + i]
+				x = quad.indices.x + plane.vertstartindex
+				y = quad.indices.y + plane.vertstartindex
+				z = quad.indices.z + plane.vertstartindex
+				a = quad.indices.a + plane.vertstartindex
 				lev_quads.append([x, y, z, a])
 				lev_quads_flags.append(plane.flags)
 
@@ -290,20 +289,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	mesh_quads.uv_layers.new()
 	mesh_quads.update()
 
-	# sort out vertex colors
-	# add 31 to make them positive, and then divide by 31 to map them between 0 and 1
-	# color = [31 + x for x in lev_saturncolors[10]]
-	# color = [x / 31 for x in color]
-	# color.extend([0])
-	# print(color)
-
 	vertex_map = defaultdict(list)
-
-	# turns out we don't even need this, since just creating a blank UV layer maps all the quads the same as saturn hardware...
-	#for face in mesh_quads.polygons:
-	#	for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-	#		uv_coords = mesh_quads.uv_layers.active.data[loop_idx].uv
-	#		print("face idx: %i, vert idx: %i, uvs: %f, %f" % (face.index, vert_idx, uv_coords.x, uv_coords.y))
 
 	layer_flags = mesh_quads.polygon_layers_float.new(name="Source Plane Flags")
 	layer_collisionflags = mesh_quads.polygon_layers_float.new(name="Source Plane Collision Flags")
@@ -321,6 +307,95 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 	obj_quads = bpy.data.objects.new(name, mesh_quads)
 
+	if (bExtractTextures):
+		for i, lev.TextureT in enumerate(lev.texturedata.textures):
+			tex = lev.TextureT
+			if tex.type != 130: break
+			tex_pixels = []
+			tex_palette = [
+						[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+						[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+						[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+						[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0]
+			]
+
+			for x, lev.PaletteEntryT in enumerate(tex.palette):
+				entry = lev.PaletteEntryT
+				tex_palette[x] = [(entry.r / 31), (entry.g / 31), (entry.b / 31), entry.a]
+
+			for y in range(4096):
+				tex_pixels.append(tex_palette[tex.imagedata[y]][0])
+				tex_pixels.append(tex_palette[tex.imagedata[y]][1])
+				tex_pixels.append(tex_palette[tex.imagedata[y]][2])
+				tex_pixels.append(tex_palette[tex.imagedata[y]][3])
+
+			texture = bpy.data.images.new("Texture", alpha=True, width=64, height=64)
+			texture.pixels = tex_pixels
+			texture.filepath_raw = filepath + f".texture.{i}.png"
+			texture.file_format = "PNG"
+			texture.update()
+			texture.save()
+
+		numTiles = 0
+
+		shaderfile = open(filepath + ".shader", "w")
+
+		for lev.PlaneT in lev.planes:
+			plane = lev.PlaneT
+
+			if plane.tileindex < lev.header.tileentrycount:
+				tile = lev.tiles[plane.tileindex]
+				width = tile.width
+				height = tile.height
+
+				for tileY in range(height):
+					for tileX in range(width):
+						tile_index = (tileY * width) + tileX
+						tile_textureindex = tile.gettiletexturedata[(tile_index * 2) + 1]
+						if tile_textureindex not in lev_materials:
+							mat = bpy.data.materials.new(name = name + f"-material-{tile_textureindex}")
+							mat.use_nodes = True
+							bsdf = mat.node_tree.nodes["Principled BSDF"]
+							texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+							texImage.image = bpy.data.images.load(filepath + f".texture.{tile_textureindex}.png")
+							mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+							obj_quads.data.materials.append(mat)
+							lev_materials.append(tile_textureindex)
+
+							shaderfile.write(mat.name)
+							shaderfile.write(" { program saturn_level diffusemap textures/levels/" + name + "/")
+							shaderfile.write(name + f".texture.{tile_textureindex}.png")
+							shaderfile.write(" cull disable }\n")
+
+
+						obj_quads.data.polygons[numTiles].material_index = lev_materials.index(tile_textureindex)
+						numTiles += 1
+
+		numQuads = 0
+
+		for lev.PlaneT in lev.planes:
+			plane = lev.PlaneT
+			if plane.quadstartindex < lev.header.quadcount:
+				for i in range(plane.quadendindex - plane.quadstartindex + 1):
+					quad = lev.quads[plane.quadstartindex + i]
+					if quad.textureindex not in lev_materials:
+						mat = bpy.data.materials.new(name = name + f"-material-{quad.textureindex}")
+						mat.use_nodes = True
+						bsdf = mat.node_tree.nodes["Principled BSDF"]
+						texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+						texImage.image = bpy.data.images.load(filepath + f".texture.{quad.textureindex}.png")
+						mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+						obj_quads.data.materials.append(mat)
+						lev_materials.append(quad.textureindex)
+
+						shaderfile.write(mat.name)
+						shaderfile.write(" { program saturn_level diffusemap textures/levels/" + name + "/")
+						shaderfile.write(name + f".texture.{quad.textureindex}.png")
+						shaderfile.write(" cull disable }\n")
+
+					obj_quads.data.polygons[numTiles + numQuads].material_index = lev_materials.index(quad.textureindex)
+					numQuads += 1
+
 	if (bFixRotation):
 		obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
 		obj_quads.rotation_euler = [math.radians(90), 0, 0]
@@ -329,26 +404,42 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 
 	scene.collection.objects.link(obj_quads)
 
-	# textures
+	if (bExtractSkyTextures):
+		skypalette = [
+					[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+					[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+					[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
+					[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0]
+		]
 
-	if (bExtractTextures):
-		# this code SUCKS
-		skypalettepixels = []
+		for i, lev.PaletteEntryT in enumerate(lev.skydata.skypalette):
+			entry = lev.PaletteEntryT
+			skypalette[i] = [(entry.r / 31), (entry.g / 31), (entry.b / 31), entry.a]
 
-		for i in range(16):
-			skypalettepixels.append(lev.skydata.skypalette[i].r * 0x1F // 0xFF)
-			skypalettepixels.append(lev.skydata.skypalette[i].g * 0x1F // 0xFF)
-			skypalettepixels.append(lev.skydata.skypalette[i].b * 0x1F // 0xFF)
-			skypalettepixels.append(lev.skydata.skypalette[i].a)
+		for x, lev.SkyimageT in enumerate(lev.skydata.skyimagedata):
+			image = lev.SkyimageT
 
-		print(skypalettepixels)
+			pixels = []
 
-		skypaletteimage = bpy.data.images.new("Sky Palette", alpha=False, width=8, height=2)
-		skypaletteimage.pixels = skypalettepixels
-		skypaletteimage.filepath_raw = filepath + ".skypalette.png"
-		skypaletteimage.file_format = "PNG"
-		skypaletteimage.update()
-		skypaletteimage.save()
+			for i in range(4096):
+				pixels.append(skypalette[image.pixels[i]][0])
+				pixels.append(skypalette[image.pixels[i]][1])
+				pixels.append(skypalette[image.pixels[i]][2])
+				pixels.append(skypalette[image.pixels[i]][3])
+
+			skyimage = bpy.data.images.new("Sky Image", alpha=True, width=64, height=64)
+			skyimage.pixels = pixels
+			skyimage.filepath_raw = filepath + f".sky.{x}.png"
+			skyimage.file_format = "PNG"
+			skyimage.update()
+			skyimage.save()
+
+		#skypaletteimage = bpy.data.images.new("Sky Palette", alpha=False, width=8, height=2)
+		#skypaletteimage.pixels = skypalettepixels
+		#skypaletteimage.filepath_raw = filepath + ".skypalette.png"
+		#skypaletteimage.file_format = "PNG"
+		#skypaletteimage.update()
+		#skypaletteimage.save()
 
 	# now done with the mesh, write out some entitiy data
 
@@ -373,7 +464,7 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 			empty_ent.location = entloc
 			empty_ent.empty_display_size = 2
 			empty_ent.empty_display_type = "PLAIN_AXES"
-			bpy.context.scene.collection.objects.link(empty_ent)
+			scene.collection.objects.link(empty_ent)
 
 			entities_doc.write("{\n")
 			entities_doc.write("\"classname\" \"%s\"\n" % enttype)

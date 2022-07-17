@@ -24,3 +24,7 @@
 /game/**/video/
 /game/**/data/
 /game/maptimes.txt
+
+/tools/io_mesh_saturnlev/__pycache__/
+
+*.blend1

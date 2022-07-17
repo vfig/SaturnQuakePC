@@ -58,10 +58,12 @@ class Qslev(KaitaiStruct):
         self._raw_entitydata = self._io.read_bytes(self.header.entitydatasize)
         _io__raw_entitydata = KaitaiStream(BytesIO(self._raw_entitydata))
         self.entitydata = Qslev.Entitydata(_io__raw_entitydata, self, self._root)
-        self.tiletexturedata = self._io.read_bytes(self.header.tiletexturedatasize)
+        self._raw_tiletexturedata = self._io.read_bytes(self.header.tiletexturedatasize)
+        _io__raw_tiletexturedata = KaitaiStream(BytesIO(self._raw_tiletexturedata))
+        self.tiletexturedata = Qslev.TiletexturedataT(_io__raw_tiletexturedata, self, self._root)
         self._raw_tilecolordata = self._io.read_bytes(self.header.tilecolordatasize)
         _io__raw_tilecolordata = KaitaiStream(BytesIO(self._raw_tilecolordata))
-        self.tilecolordata = Qslev.Tilecolordata(_io__raw_tilecolordata, self, self._root)
+        self.tilecolordata = Qslev.TilecolordataT(_io__raw_tilecolordata, self, self._root)
         self.unknown = []
         for i in range(self.header.unknowncount):
             self.unknown.append(self._io.read_bytes(128))
@@ -84,17 +86,6 @@ class Qslev(KaitaiStruct):
 
 
 
-    class Tilecolordata(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.data = self._io.read_bytes(self._parent.header.tilecolordatasize)
-
-
     class GlobalPaletteT(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -106,7 +97,7 @@ class Qslev(KaitaiStruct):
             self.len_block = self._io.read_u4be()
             self.color = []
             for i in range(self.len_block // 2):
-                self.color.append(self._io.read_u2be())
+                self.color.append(Qslev.PaletteEntryT(self._io, self, self._root))
 
 
 
@@ -146,6 +137,17 @@ class Qslev(KaitaiStruct):
         def _read(self):
             self.x = self._io.read_u2be()
             self.y = self._io.read_u2be()
+
+
+    class TiletexturedataT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.data = self._io.read_bytes(self._parent.header.tiletexturedatasize)
 
 
     class Ent42(KaitaiStruct):
@@ -374,12 +376,26 @@ class Qslev(KaitaiStruct):
             self.type = self._io.read_u1()
             self.palette = []
             for i in range(16):
-                self.palette.append(self._io.read_u2be())
+                self.palette.append(Qslev.PaletteEntryT(self._io, self, self._root))
 
             self.imagedata = []
-            for i in range(2048):
-                self.imagedata.append(self._io.read_u1())
+            for i in range(4096):
+                self.imagedata.append(self._io.read_bits_int_be(4))
 
+
+
+    class PaletteEntryT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.a = self._io.read_bits_int_be(1) != 0
+            self.b = self._io.read_bits_int_be(5)
+            self.g = self._io.read_bits_int_be(5)
+            self.r = self._io.read_bits_int_be(5)
 
 
     class Tilesubvector(KaitaiStruct):
@@ -448,7 +464,7 @@ class Qslev(KaitaiStruct):
         def _read(self):
             self.skypalette = []
             for i in range(16):
-                self.skypalette.append(Qslev.SkypaletteentryT(self._io, self, self._root))
+                self.skypalette.append(Qslev.PaletteEntryT(self._io, self, self._root))
 
             self.skyimagedata = []
             for i in range(64):
@@ -511,20 +527,6 @@ class Qslev(KaitaiStruct):
 
 
 
-    class SkypaletteentryT(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.r = self._io.read_bits_int_be(5)
-            self.g = self._io.read_bits_int_be(5)
-            self.b = self._io.read_bits_int_be(5)
-            self.a = self._io.read_bits_int_be(1) != 0
-
-
     class Ent18(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -570,6 +572,21 @@ class Qslev(KaitaiStruct):
 
             io.seek(_pos)
             return getattr(self, '_m_getcolordata', None)
+
+        @property
+        def gettiletexturedata(self):
+            if hasattr(self, '_m_gettiletexturedata'):
+                return self._m_gettiletexturedata
+
+            io = self._root.tiletexturedata._io
+            _pos = io.pos()
+            io.seek(self.texturedataofs)
+            self._m_gettiletexturedata = []
+            for i in range(((self.height * self.width) * 2)):
+                self._m_gettiletexturedata.append(io.read_u1())
+
+            io.seek(_pos)
+            return getattr(self, '_m_gettiletexturedata', None)
 
 
     class SkyimageentryT(KaitaiStruct):
@@ -646,9 +663,24 @@ class Qslev(KaitaiStruct):
         def _read(self):
             self.count = self._io.read_u4be()
             self.textures = []
-            for i in range(58):
-                self.textures.append(Qslev.TextureT(self._io, self, self._root))
+            i = 0
+            while True:
+                _ = Qslev.TextureT(self._io, self, self._root)
+                self.textures.append(_)
+                if _.type != 130:
+                    break
+                i += 1
 
+
+    class TilecolordataT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.data = self._io.read_bytes(self._parent.header.tilecolordatasize)
 
 
     class Vec3s2(KaitaiStruct):
