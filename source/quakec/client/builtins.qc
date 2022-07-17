@@ -121,10 +121,26 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 	}
 	else
 	{
-		setproperty(VF_DRAWENGINESBAR, 1);
-		setproperty(VF_DRAWCROSSHAIR, 1);
+		if (cvar("r_drawhud") > 0)
+		{
+			setproperty(VF_DRAWENGINESBAR, 1);
+			if (cvar("crosshair") > 0)
+				setproperty(VF_DRAWCROSSHAIR, 1);
+			else
+				setproperty(VF_DRAWCROSSHAIR, 0);
+		}
+		else
+		{
+			setproperty(VF_DRAWENGINESBAR, 0);
+			setproperty(VF_DRAWCROSSHAIR, 0);
+		}
+
 		setproperty(VF_DRAWWORLD, 1);
-		addentities((intermission?0:MASK_VIEWMODEL)|MASK_ENGINE);
+
+		if (cvar("r_drawviewmodel") > 0)
+			addentities((intermission?0:MASK_VIEWMODEL)|MASK_ENGINE);
+		else
+			addentities(MASK_ENGINE);			
 	}
 
 	renderscene();
@@ -262,6 +278,9 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateViewLoading =
 
 void(float apilevel, string enginename, float engineversion) CSQC_Init =
 {
+	//print("world.model: ", world.model, "\n");
+	//precache_model("maps/title.iqm");
+	//setmodel(world, "maps/title.iqm");
 	lbar_width = 0;
 };
 

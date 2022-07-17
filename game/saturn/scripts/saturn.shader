@@ -2,7 +2,7 @@ gfx/unspecified
 {
 	program saturn_level
 	diffusemap textures/grid.png
-	cull disable
+	cull back
 }
 
 saturn_water
@@ -19,7 +19,7 @@ sky_saturn_01
 	{
 		map textures/sky/sky_saturn_01_clouds.png
 	}
-	cull disable
+	cull back
 }
 
 sky_saturn_02
@@ -31,5 +31,5 @@ sky_saturn_02
 	{
 		map textures/sky/sky_saturn_02_clouds.png
 	}
-	cull disable
+	cull back
 }
