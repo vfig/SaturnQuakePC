@@ -398,7 +398,7 @@ types:
         repeat-expr: data1offset.y - data1offset.x + 1
       getdata2:
         io: _root.entitypolylinkdata2._io
-        pos: data2offset.x * 2
+        pos: data2offset.x * 4
         type: entitypolylinkdata2_single_t
         repeat: expr
         repeat-expr: data2offset.y - data2offset.x + 1
