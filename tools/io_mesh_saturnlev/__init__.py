@@ -58,22 +58,23 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 	bExtractTextures : BoolProperty(name="Extract Textures", default=True)
 	bExtractSkyTextures : BoolProperty(name="Extract Sky Textures", default=False)
-	bExtractEntities : BoolProperty(name="Extract Entities", default=False)
+	bExtractEntities : BoolProperty(name="Extract Entities", default=True)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
-	ImportScale : FloatProperty(name="Import Scale", default=0.25)
+	bGenerateMapFile : BoolProperty(name="Generate .map File", default=False)
+	ImportScale : FloatProperty(name="Import Scale", default=1.0)
 
 	debug_planes : BoolProperty(name="DEBUG: show planes with tiles", default=False)
 	debug_plane_index : IntProperty(name="DEBUG: show only this specific plane index", default=-1)
 
 	def execute(self, context):
-		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes, self.debug_planes, self.debug_plane_index, self.bExtractSkyTextures)
+		load(context, self.filepath, self.bExtractTextures, self.bExtractEntities, self.ImportScale, self.bFixRotation, self.bImportNodes, self.bGenerateMapFile, self.debug_planes, self.debug_plane_index, self.bExtractSkyTextures)
 		return {'FINISHED'}
 
 def menu_func(self, context):
 	self.layout.operator(ImportLEV.bl_idname, text="Quake Sega Saturn Level (.lev)")
 
-def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes, debug_planes, debug_plane_index, bExtractSkyTextures):
+def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFixRotation, bImportNodes, bGenerateMapFile, debug_planes, debug_plane_index, bExtractSkyTextures):
 	print("Reading %s..." % filepath)
 
 	name = bpy.path.basename(filepath)
@@ -367,7 +368,6 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 							shaderfile.write(name + f".texture.{tile_textureindex}.png")
 							shaderfile.write(" cull disable }\n")
 
-
 						obj_quads.data.polygons[numTiles].material_index = lev_materials.index(tile_textureindex)
 						numTiles += 1
 
@@ -439,53 +439,43 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		def match_entity(ent):
 			match ent:
 				# lights and light subtypes
-				case 38: # static white light
-					return "light"
-				case 92: # ?
-					return "light"
-				case 110: # heavy red pulse
-					return "light"
-				case 232: # flicker
-					return "light"
-				case 235: # ?
-					return "light"
-				case 253: # ?
-					return "light"
+				case 38: return "light" # static white
+				case 92: return "light" # (style?)
+				case 110: return "light" # heavy red pulse
+				case 232: return "light" # flicker
+				case 235: return "light" # (style?)
+				case 253: return "light" # (style?)
 				# ammo and items
-				case 29:
-					return "item_shells"
-				case 88:
-					return "item_armor1"
+				case 29: return "item_shells"
+				case 88: return "item_armor1"
 				# player
-				case 13:
-					return "info_player_start"
+				case 13: return "info_player_start"
 				# monsters
-				case 243:
-					return "monster_army"
-				case 244:
-					return "monster_dog"
+				case 243: return "monster_army"
+				case 244: return "monster_dog"
 				# miscellaneous
-				case 113:
-					return "light_flame_large_yellow"
+				case 113: return "light_flame_large_yellow"
 				# poly objects
-				case 146:
-					return "func_door"
-				case _:
-					return str(ent)
+				case 146: return "func_door"
+				# default
+				case _: return str(ent)
 
 		entities_doc = open(filepath + ".ent",'w')
 
 		entities = []
 
-		for lev.EntityT in lev.entities:
+		for entNum, lev.EntityT in enumerate(lev.entities):
 			ent = lev.EntityT
-			enttype = "Entity " + match_entity(ent.enttype)
+			enttype = f"Entity {entNum}: " + match_entity(ent.enttype)
 			if (bFixRotation):
 				entloc = [-ent.getentitydata.origin.x * ImportScale, -ent.getentitydata.origin.z * ImportScale, ent.getentitydata.origin.y * ImportScale]
 			else:
 				entloc = [ent.getentitydata.origin.x * ImportScale, ent.getentitydata.origin.y * ImportScale, ent.getentitydata.origin.z * ImportScale]
 
-			entloc_original = [ent.getentitydata.origin.x * ImportScale, ent.getentitydata.origin.y * ImportScale, ent.getentitydata.origin.z * ImportScale]
+			entloc_original = [ent.getentitydata.origin.x, ent.getentitydata.origin.y, ent.getentitydata.origin.z]
+
+			#if match_entity(ent.enttype)[0:8] == "monster_" or match_entity(ent.enttype)[0:5] == "item_":
+			#	entloc[2] += 64
 
 			empty_ent = bpy.data.objects.new(enttype, None)
 			empty_ent.location = entloc
@@ -508,3 +498,53 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		obj_quads.scale = [ImportScale, ImportScale, ImportScale]
 
 	scene.collection.objects.link(obj_quads)
+
+	if (bGenerateMapFile):
+		mapfile = open(filepath + ".map", "w")
+		mapfile.write("// Game: Quake\n")
+		mapfile.write("// Format: Standard\n")
+		mapfile.write("// entity 0\n")
+		mapfile.write("{\n")
+		mapfile.write(f"\"classname\" \"worldspawn\"\n")
+
+		brushNum = 0
+
+		for i, lev.PlaneT in enumerate(lev.planes):
+			plane = lev.PlaneT
+
+			normal = Vector([plane.plane.x / 16384, plane.plane.y / 16384, plane.plane.z / 16384])
+			distance = plane.plane.a
+			mod = -normal * distance
+
+			def write_brush(verts_start, num):
+				verts_end = [verts_start[2] + mod, verts_start[1] + mod, verts_start[0] + mod, verts_start[3] + mod]
+				verts_1 = [verts_end[0], verts_end[3], verts_start[3], verts_start[2]]
+				verts_2 = [verts_end[2], verts_start[0], verts_start[3], verts_end[3]]
+				verts_3 = [verts_start[2], verts_start[1], verts_end[1], verts_end[0]]
+				verts_4 = [verts_end[1], verts_start[1], verts_start[0], verts_end[2]]
+				mapfile.write(f"// brush {num}\n")
+				mapfile.write("{\n")
+				mapfile.write(f"( {verts_1[0][0]} {verts_1[0][1]} {verts_1[0][2]} ) ( {verts_1[1][0]} {verts_1[1][1]} {verts_1[1][2]} ) ( {verts_1[2][0]} {verts_1[2][1]} {verts_1[2][2]} ) hintskip 0 0 0 1 1\n")
+				mapfile.write(f"( {verts_2[0][0]} {verts_2[0][1]} {verts_2[0][2]} ) ( {verts_2[1][0]} {verts_2[1][1]} {verts_2[1][2]} ) ( {verts_2[2][0]} {verts_2[2][1]} {verts_2[2][2]} ) hintskip 0 0 0 1 1\n")
+				mapfile.write(f"( {verts_end[0][0]} {verts_end[0][1]} {verts_end[0][2]} ) ( {verts_end[1][0]} {verts_end[1][1]} {verts_end[1][2]} ) ( {verts_end[2][0]} {verts_end[2][1]} {verts_end[2][2]} ) trigger 0 0 0 1 1\n")
+				mapfile.write(f"( {verts_start[0][0]} {verts_start[0][1]} {verts_start[0][2]} ) ( {verts_start[1][0]} {verts_start[1][1]} {verts_start[1][2]} ) ( {verts_start[2][0]} {verts_start[2][1]} {verts_start[2][2]} ) skip 0 0 0 1 1\n")
+				mapfile.write(f"( {verts_3[0][0]} {verts_3[0][1]} {verts_3[0][2]} ) ( {verts_3[1][0]} {verts_3[1][1]} {verts_3[1][2]} ) ( {verts_3[2][0]} {verts_3[2][1]} {verts_3[2][2]} ) hintskip 0 0 0 1 1\n")
+				mapfile.write(f"( {verts_4[0][0]} {verts_4[0][1]} {verts_4[0][2]} ) ( {verts_4[1][0]} {verts_4[1][1]} {verts_4[1][2]} ) ( {verts_4[2][0]} {verts_4[2][1]} {verts_4[2][2]} ) hintskip 0 0 0 1 1\n")
+				mapfile.write("}\n")
+
+			if plane.tileindex < lev.header.tileentrycount:
+				write_brush([Vector(lev_verts[plane.vertices.a]), Vector(lev_verts[plane.vertices.z]), Vector(lev_verts[plane.vertices.y]), Vector(lev_verts[plane.vertices.x])], brushNum)
+				brushNum += 1
+			#if plane.quadstartindex < lev.header.quadcount:
+			#	write_brush([Vector(lev_verts[plane.vertices.a]), Vector(lev_verts[plane.vertices.z]), Vector(lev_verts[plane.vertices.y]), Vector(lev_verts[plane.vertices.x])], brushNum)
+			#	brushNum += 1
+				#for i in range(plane.quadendindex - plane.quadstartindex + 1):
+				#	quad = lev.quads[plane.quadstartindex + i]
+				#	quadx = quad.indices.x + plane.vertstartindex
+				#	quady = quad.indices.y + plane.vertstartindex
+				#	quadz = quad.indices.z + plane.vertstartindex
+				#	quada = quad.indices.a + plane.vertstartindex
+				#	write_brush([Vector(lev_verts[quadx]), Vector(lev_verts[quady]), Vector(lev_verts[quadz]), Vector(lev_verts[quada])], brushNum)
+				#	brushNum += 1
+
+		mapfile.write("}\n")

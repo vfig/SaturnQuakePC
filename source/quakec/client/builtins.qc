@@ -153,12 +153,6 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 		weapon_viewsprite_size = [320, 240];
 		weapon_viewsprite_pos = [0, CalcViewBob() - 48];
 
-		vector screensize = [vwidth * cvar("scr_conscale"), vheight * cvar("scr_conscale")];
-		int screensize_size = sizeof(screensize);
-		vector *screensize_pointer = &screensize;
-
-		setproperty(VF_USERDATA, screensize_pointer, screensize_size);
-
 		if (activeweapon == IT_AXE)
 		{
 			if (activeweaponframe == 0) weapon_viewsprite = "gfx/weapons/axe_idle01.png";
@@ -252,6 +246,14 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView =
 
 		dpos = CalculateDisplayPos([vwidth, vheight], aspect_fullscreen);
 		dsize = CalculateDisplaySize([vwidth, vheight], aspect_fullscreen);
+
+		vector screensize = [dsize[0] * cvar("scr_conscale"), dsize[1] * cvar("scr_conscale")];
+		vector screenpos = dpos;
+		vector userdata[2] = {screensize, screenpos};
+		int userdata_size = sizeof(userdata);
+		vector *userdata_pointer = &userdata;
+
+		setproperty(VF_USERDATA, userdata_pointer, userdata_size);
 
 		drawpic(dpos, "screenrtshader", dsize, [1, 1, 1], 1);
 	}

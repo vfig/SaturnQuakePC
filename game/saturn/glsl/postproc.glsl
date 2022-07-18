@@ -25,11 +25,12 @@ varying vec2 txc;
 			// https://www.shadertoy.com/view/WsVSzV
 
 			vec2 screensize = vec2(w_user[0]);
+			vec2 screenpos = vec2(w_user[1]);
 
 			float warp = 0.75; // simulate curvature of CRT monitor
 			float scan = 1.5; // simulate darkness between scanlines
 
-			vec2 uv = gl_FragCoord.xy / screensize.xy;
+			vec2 uv = vec2(gl_FragCoord.x + screenpos.x, gl_FragCoord.y + screenpos.y).xy / screensize.xy;
 			vec2 dc = abs(0.5 - uv);
 			dc *= dc;
 

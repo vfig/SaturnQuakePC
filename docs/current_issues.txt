@@ -1,0 +1,4 @@
+my list of issues right now is thus:
+- monsters are spawning in the right position from the entity data, but they fall through the floor and out of the world
+- weapon viewmodel bob doesn't work on trisoup levels (probably FL_ONGROUND flag)
+- dunno how to do anything related to dynamix vertex lighting
