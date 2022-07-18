@@ -35,17 +35,15 @@ seq:
     repeat: expr
     repeat-expr: header.entitycount
   - id: entitypolylinks
-    size: 18
+    type: entitypolylink_t
     repeat: expr
     repeat-expr: header.entitypolylinkcount
   - id: entitypolylinkdata1
-    size: 2
-    repeat: expr
-    repeat-expr: header.entitypolylinkdata1count
+    type: entitypolylinkdata1_t
+    size: header.entitypolylinkdata1count * 2
   - id: entitypolylinkdata2
-    size: 4
-    repeat: expr
-    repeat-expr: header.entitypolylinkdata2count
+    type: entitypolylinkdata2_t
+    size: header.entitypolylinkdata2count * 4
   - id: entitydata
     type: entitydata
     size: header.entitydatasize
@@ -287,6 +285,32 @@ types:
       - id: data
         size: _parent.header.entitydatasize
 
+  entitypolylinkdata1_t:
+    seq:
+      - id: data
+        type: u1
+        repeat: eos
+
+  entitypolylinkdata2_t:
+    seq:
+      - id: data
+        type: u1
+        repeat: eos
+
+  entitypolylinkdata1_single_t:
+    seq:
+      - id: data
+        type: u1
+        repeat: expr
+        repeat-expr: 2
+
+  entitypolylinkdata2_single_t:
+    seq:
+      - id: data
+        type: u1
+        repeat: expr
+        repeat-expr: 4
+
   # mapped entity size declations
 
   ent_6:
@@ -351,6 +375,33 @@ types:
         type: s1
 
   ent_null: {}
+
+  # 18 bytes each
+  entitypolylink_t:
+    seq:
+      - id: lead
+        type: u2
+      - id: data1offset
+        type: vec2u2
+      - id: data2offset
+        type: vec2u2
+      - id: value4
+        type: u2
+      - id: reserved
+        type: vec3u2
+    instances:
+      getdata1:
+        io: _root.entitypolylinkdata1._io
+        pos: data1offset.x * 2
+        type: entitypolylinkdata1_single_t
+        repeat: expr
+        repeat-expr: data1offset.y - data1offset.x + 1
+      getdata2:
+        io: _root.entitypolylinkdata2._io
+        pos: data2offset.x * 2
+        type: entitypolylinkdata2_single_t
+        repeat: expr
+        repeat-expr: data2offset.y - data2offset.x + 1
 
   tabledata1_t:
     seq:
