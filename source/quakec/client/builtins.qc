@@ -304,3 +304,86 @@ void(string printmsg, float printlvl) CSQC_Parse_Print =
 		cprint_timer = time + 5;
 	}
 };
+
+float() ParseMapEntity =
+{
+	local string field, value;
+	local entity newent = spawn();
+	local void() spawnfunc = __NULL__;
+	
+	while (1)
+	{
+		field = getentitytoken();
+
+		if not (field)
+			break;
+
+		if (field == "}")
+		{
+			if (!newent.classname)
+				break;
+
+			if (spawnfunc)
+			{
+				self = newent;
+				spawnfunc();
+				return TRUE;
+			}
+
+			remove(newent);
+			return TRUE;
+		}
+
+		value = getentitytoken();
+
+		if not (value)
+			break;
+
+		if (field == "classname")
+		{
+			if (value != "worldspawn")
+				spawnfunc = spawnfunc_csqc_developer_ent;
+	
+			newent.classname = value;
+		}
+		else if (field == "model")
+			newent.model = value;
+		else if (field == "message")
+			newent.message = value;
+		else if (field == "angles")
+			newent.angles = stov(value);
+		else if (field == "origin")
+			setorigin(newent, stov(value));
+		else if (field == "frame")
+			newent.frame = stof(value);
+	}
+
+	remove(newent);
+
+	return FALSE;
+};
+
+void() CSQC_WorldLoaded =
+{
+	string token;
+
+	while (1)
+	{
+		token = getentitytoken();
+
+		if (token == "")
+			break;
+
+		if (token != "{")
+		{
+			print("^1bad entity data token!\n");
+			return;
+		}
+		
+		if (!ParseMapEntity())
+		{
+			print("^1could not parse entity data in mapfile\n");
+			return;
+		}
+	}
+};

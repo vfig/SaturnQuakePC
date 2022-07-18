@@ -438,19 +438,18 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	if (bExtractEntities):
 		def match_entity(ent):
 			match ent:
-				# base light
-				case 38:
+				# lights and light subtypes
+				case 38: # static white light
 					return "light"
-				# styled lights
-				case 92:
+				case 92: # ?
 					return "light"
-				case 110:
+				case 110: # heavy red pulse
 					return "light"
-				case 232:
+				case 232: # flicker
 					return "light"
-				case 235:
+				case 235: # ?
 					return "light"
-				case 253:
+				case 253: # ?
 					return "light"
 				# ammo and items
 				case 29:

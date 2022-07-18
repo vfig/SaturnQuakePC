@@ -10,5 +10,7 @@
 	shared/defs.qc
 
 	// setup
+	client/csqc_sprite.qc
+	client/csqc_developer_ent.qc
 	client/builtins.qc
 #endlist
