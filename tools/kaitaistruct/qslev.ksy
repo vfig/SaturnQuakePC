@@ -272,34 +272,15 @@ types:
       getentitydata:
         io: _root.entitydata._io
         pos: dataofs
-        # type: s1
-        # repeat: expr
-        # repeat-expr: _parent.entities[x + 1].dataofs - dataofs
-        type:
-            switch-on: enttype
-            cases:
-              0x2E: ent_12
-              0x1C: ent_12
-              0x71: ent_12
-              0x4A: ent_12
-              0x9A: ent_18
-              0x94: ent_18
-              0x95: ent_18
-              0x92: ent_42
-              0x26: ent_24
-              0xFE: ent_12
-              0xE8: ent_1656
-              0xA4: ent_10
-              0x93: ent_12
-              0xD: ent_10
-              0x6F: ent_12
-              0x5C: ent_6
-              0x8F: ent_12
-              0x82: ent_12
-              0x7D: ent_12
-              0x80: ent_12
-              0x83: ent_12
-              _: ent_placeholder
+        type: entity_datablock_t
+        #size: _parent.entities[x + 1].dataofs - dataofs
+
+  entity_datablock_t:
+    seq:
+      - id: lead
+        type: s2
+      - id: origin
+        type: vec3s2
 
   entitydata:
     seq:
@@ -356,6 +337,13 @@ types:
         type: s1
         repeat: expr
         repeat-expr: 1656
+
+  ent_1614:
+    seq:
+      - id: data
+        type: s1
+        repeat: expr
+        repeat-expr: 1614
 
   ent_placeholder:
     seq:

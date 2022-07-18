@@ -222,51 +222,7 @@ class Qslev(KaitaiStruct):
             io = self._root.entitydata._io
             _pos = io.pos()
             io.seek(self.dataofs)
-            _on = self.enttype
-            if _on == 131:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 146:
-                self._m_getentitydata = Qslev.Ent42(io, self, self._root)
-            elif _on == 46:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 113:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 13:
-                self._m_getentitydata = Qslev.Ent10(io, self, self._root)
-            elif _on == 149:
-                self._m_getentitydata = Qslev.Ent18(io, self, self._root)
-            elif _on == 143:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 125:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 38:
-                self._m_getentitydata = Qslev.Ent24(io, self, self._root)
-            elif _on == 148:
-                self._m_getentitydata = Qslev.Ent18(io, self, self._root)
-            elif _on == 130:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 232:
-                self._m_getentitydata = Qslev.Ent1656(io, self, self._root)
-            elif _on == 164:
-                self._m_getentitydata = Qslev.Ent10(io, self, self._root)
-            elif _on == 28:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 74:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 147:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 92:
-                self._m_getentitydata = Qslev.Ent6(io, self, self._root)
-            elif _on == 111:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 128:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 254:
-                self._m_getentitydata = Qslev.Ent12(io, self, self._root)
-            elif _on == 154:
-                self._m_getentitydata = Qslev.Ent18(io, self, self._root)
-            else:
-                self._m_getentitydata = Qslev.EntPlaceholder(io, self, self._root)
+            self._m_getentitydata = Qslev.EntityDatablockT(io, self, self._root)
             io.seek(_pos)
             return getattr(self, '_m_getentitydata', None)
 
@@ -297,6 +253,20 @@ class Qslev(KaitaiStruct):
             self.x = self._io.read_u2be()
             self.y = self._io.read_u2be()
             self.z = self._io.read_u2be()
+
+
+    class Ent1614(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.data = []
+            for i in range(1614):
+                self.data.append(self._io.read_s1())
+
 
 
     class HeaderT(KaitaiStruct):
@@ -396,6 +366,18 @@ class Qslev(KaitaiStruct):
             self.b = self._io.read_bits_int_be(5)
             self.g = self._io.read_bits_int_be(5)
             self.r = self._io.read_bits_int_be(5)
+
+
+    class EntityDatablockT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.lead = self._io.read_s2be()
+            self.origin = Qslev.Vec3s2(self._io, self, self._root)
 
 
     class Tilesubvector(KaitaiStruct):

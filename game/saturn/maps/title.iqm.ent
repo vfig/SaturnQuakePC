@@ -1,7 +1,56 @@
 {
-	"classname" "worldspawn"
+"classname" "light_flame_large_yellow"
+"origin" "-382.0 31.0 -88.0"
 }
 {
-	"classname" "info_player_start"
-	"origin" "0 0 0"
+"classname" "light_flame_large_yellow"
+"origin" "3.0 29.0 -87.0"
+}
+{
+"classname" "light"
+"origin" "-544.0 501.0 68.0"
+}
+{
+"classname" "light"
+"origin" "-659.0 496.0 65.0"
+}
+{
+"classname" "light"
+"origin" "-203.0 986.0 62.0"
+}
+{
+"classname" "light"
+"origin" "-603.0 276.0 56.0"
+}
+{
+"classname" "light"
+"origin" "202.0 276.0 68.0"
+}
+{
+"classname" "light"
+"origin" "-188.0 41.0 140.0"
+}
+{
+"classname" "light"
+"origin" "-180.0 1152.0 -213.0"
+}
+{
+"classname" "light"
+"origin" "-226.0 813.0 -112.0"
+}
+{
+"classname" "light"
+"origin" "156.0 518.0 65.0"
+}
+{
+"classname" "light"
+"origin" "11.0 25.0 -78.0"
+}
+{
+"classname" "light"
+"origin" "-388.0 16.0 -67.0"
+}
+{
+"classname" "info_player_start"
+"origin" "-175.0 497.0 -100.0"
 }

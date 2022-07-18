@@ -396,14 +396,6 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 					obj_quads.data.polygons[numTiles + numQuads].material_index = lev_materials.index(quad.textureindex)
 					numQuads += 1
 
-	if (bFixRotation):
-		obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
-		obj_quads.rotation_euler = [math.radians(90), 0, 0]
-	else:
-		obj_quads.scale = [ImportScale, ImportScale, ImportScale]
-
-	scene.collection.objects.link(obj_quads)
-
 	if (bExtractSkyTextures):
 		skypalette = [
 					[0, 0, 0, 0],	[0, 0, 0, 0],	[0, 0, 0, 0], [0, 0, 0, 0],
@@ -446,28 +438,74 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 	if (bExtractEntities):
 		def match_entity(ent):
 			match ent:
+				# base light
+				case 38:
+					return "light"
+				# styled lights
+				case 92:
+					return "light"
+				case 110:
+					return "light"
+				case 232:
+					return "light"
+				case 235:
+					return "light"
+				case 253:
+					return "light"
+				# ammo and items
+				case 29:
+					return "item_shells"
+				case 88:
+					return "item_armor1"
+				# player
+				case 13:
+					return "info_player_start"
+				# monsters
+				case 243:
+					return "monster_army"
+				case 244:
+					return "monster_dog"
+				# miscellaneous
+				case 113:
+					return "light_flame_large_yellow"
+				# poly objects
 				case 146:
-					return "func_mover"
+					return "func_door"
 				case _:
 					return str(ent)
 
 		entities_doc = open(filepath + ".ent",'w')
 
+		entities = []
+
 		for lev.EntityT in lev.entities:
 			ent = lev.EntityT
-			enttype = match_entity(ent.enttype)
-			entloc = [ent.getentitydata.data[0], -ent.getentitydata.data[2], ent.getentitydata.data[1]]
+			enttype = "Entity " + match_entity(ent.enttype)
+			if (bFixRotation):
+				entloc = [-ent.getentitydata.origin.x * ImportScale, -ent.getentitydata.origin.z * ImportScale, ent.getentitydata.origin.y * ImportScale]
+			else:
+				entloc = [ent.getentitydata.origin.x * ImportScale, ent.getentitydata.origin.y * ImportScale, ent.getentitydata.origin.z * ImportScale]
 
-			#print(str(enttype) + " position: " + str(entloc))
+			entloc_original = [ent.getentitydata.origin.x * ImportScale, ent.getentitydata.origin.y * ImportScale, ent.getentitydata.origin.z * ImportScale]
 
 			empty_ent = bpy.data.objects.new(enttype, None)
 			empty_ent.location = entloc
+			empty_ent["original_origin"] = f"{entloc_original[0]} {entloc_original[1]} {entloc_original[2]}"
+			empty_ent["classname"] = match_entity(ent.enttype)
 			empty_ent.empty_display_size = 2
 			empty_ent.empty_display_type = "PLAIN_AXES"
 			scene.collection.objects.link(empty_ent)
-
 			entities_doc.write("{\n")
-			entities_doc.write("\"classname\" \"%s\"\n" % enttype)
-			for i in range(len(ent.getentitydata.data)):
-				entities_doc.write("\"byte%i\" \"%s\"\n" % (i, ent.getentitydata.data[i]))
+			entities_doc.write(f"\"classname\" \"" + match_entity(ent.enttype) + "\"\n")
+			entities_doc.write(f"\"origin\" \"{entloc[0]} {entloc[1]} {entloc[2]}\"\n")
 			entities_doc.write("}\n")
+
+			#empty_ent.parent = obj_quads
+
+	if (bFixRotation):
+		obj_quads.scale = [-ImportScale, ImportScale, ImportScale]
+		obj_quads.rotation_euler = [math.radians(90), 0, 0]
+	else:
+		obj_quads.scale = [ImportScale, ImportScale, ImportScale]
+
+	scene.collection.objects.link(obj_quads)
