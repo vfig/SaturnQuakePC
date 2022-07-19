@@ -456,13 +456,28 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 				# miscellaneous
 				case 113: return "light_flame_large_yellow"
 				# poly objects
-				case 146: return "func_door"
+				case 146: return "misc_polymover"
 				# default
 				case _: return str(ent)
 
 		entities_doc = open(filepath + ".ent",'w')
 
 		entities = []
+
+		l = 0
+
+		# entity polylinks
+		for entNum, lev.EntityT in enumerate(lev.entities):
+			ent = lev.EntityT
+			if ent.enttype == 146:
+				polylink_id = ent.getentitydata.polylink_id
+				link = lev.entitypolylinks[polylink_id]
+				print(f"{l} - entity number {entNum}: link {polylink_id}")
+				print("-----------")
+				print(link.getdata1)
+				print(link.getdata2)
+				print("----------------------")
+				l += 1
 
 		for entNum, lev.EntityT in enumerate(lev.entities):
 			ent = lev.EntityT

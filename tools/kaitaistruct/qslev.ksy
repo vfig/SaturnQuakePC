@@ -270,8 +270,12 @@ types:
       getentitydata:
         io: _root.entitydata._io
         pos: dataofs
-        type: entity_datablock_t
         #size: _parent.entities[x + 1].dataofs - dataofs
+        type:
+            switch-on: enttype
+            cases:
+              0x92: entity_polymover_t # poly mover
+              _: entity_datablock_t
 
   entity_datablock_t:
     seq:
@@ -279,6 +283,17 @@ types:
         type: s2
       - id: origin
         type: vec3s2
+
+  entity_polymover_t:
+    seq:
+      - id: polylink_id
+        type: s2
+      - id: origin
+        type: vec3s2
+      - id: data
+        type: s2
+        repeat: expr
+        repeat-expr: 17
 
   entitydata:
     seq:
@@ -303,6 +318,7 @@ types:
         type: u1
         repeat: expr
         repeat-expr: 2
+        if: _root.header.entitypolylinkdata1count != 0
 
   entitypolylinkdata2_single_t:
     seq:
@@ -310,6 +326,7 @@ types:
         type: u1
         repeat: expr
         repeat-expr: 4
+        if: _root.header.entitypolylinkdata2count != 0
 
   # mapped entity size declations
 
