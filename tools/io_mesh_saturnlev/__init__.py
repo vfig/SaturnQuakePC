@@ -15,6 +15,7 @@ import numpy
 import bpy
 import bmesh
 from mathutils import *
+from enum import Flag, auto
 
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, CollectionProperty, BoolProperty, EnumProperty, FloatProperty, IntProperty
@@ -109,6 +110,27 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 				[-2,-1,-1],		[-1,0,0],		[0,0,0]
 	]
 
+	class lev_planeflags(Flag):
+		LAVA = 1
+		UN2 = 2
+		UN3 = 4
+		MOVER = 8
+		UN4 = 16
+		UN5 = 32
+		UN6 = 64
+		UN7 = 128
+		VISIBLE = 256
+		LIQUID = 512
+		UN8 = 1024
+		UN9 = 2048
+		UN10 = 4096
+		SLIME = 8192
+
+		# LAVA surface = 384 = 256 + 128 + 1
+		# LAVA volume = 641 = 512 + 128 + 1
+		# WATER volume = 512 = 512
+		# SLIME volume = 8704 = 8192 + 512
+
 	lev_verts = []
 	lev_vertcolorvalues = []
 	lev_quads = []
@@ -183,6 +205,31 @@ def load(context, filepath, bExtractTextures, bExtractEntities, ImportScale, bFi
 		obj.location = center
 		obj.display_type = 'WIRE'
 		scene.collection.objects.link(obj)
+
+	for plane_index, lev.PlaneT in enumerate(lev.planes):
+		plane = lev.PlaneT
+
+		if plane.tileindex < lev.header.tileentrycount or plane.quadstartindex < lev.header.quadcount:
+			lev_flaggedplane_verts = []
+			lev_flaggedplane_quads = []
+
+			lev_flaggedplane_verts.append([-lev_verts[plane.vertices.x][0] * ImportScale, -lev_verts[plane.vertices.x][2] * ImportScale, lev_verts[plane.vertices.x][1] * ImportScale])
+			lev_flaggedplane_verts.append([-lev_verts[plane.vertices.y][0] * ImportScale, -lev_verts[plane.vertices.y][2] * ImportScale, lev_verts[plane.vertices.y][1] * ImportScale])
+			lev_flaggedplane_verts.append([-lev_verts[plane.vertices.z][0] * ImportScale, -lev_verts[plane.vertices.z][2] * ImportScale, lev_verts[plane.vertices.z][1] * ImportScale])
+			lev_flaggedplane_verts.append([-lev_verts[plane.vertices.a][0] * ImportScale, -lev_verts[plane.vertices.a][2] * ImportScale, lev_verts[plane.vertices.a][1] * ImportScale])
+
+			lev_flaggedplane_quads.append([0, 1, 2, 3])
+
+			mesh_flaggedplane = bpy.data.meshes.new(f"Flagged Plane {plane_index}")
+			mesh_flaggedplane.from_pydata(lev_flaggedplane_verts, [], lev_flaggedplane_quads)
+			mesh_flaggedplane.update()
+
+			obj_flaggedplane = bpy.data.objects.new(f"Flagged Plane {plane_index}", mesh_flaggedplane)
+			obj_flaggedplane["flags"] = plane.flags
+			obj_flaggedplane["collisionflags"] = plane.collisionflags
+			scene.collection.objects.link(obj_flaggedplane)
+
+	return
 
 	# thank you vfig
 	for plane_index, lev.PlaneT in enumerate(lev.planes):
