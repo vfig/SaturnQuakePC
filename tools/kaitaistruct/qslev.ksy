@@ -270,6 +270,7 @@ types:
       getentitydata:
         io: _root.entitydata._io
         pos: dataofs
+        if: dataofs < _root.header.entitydatasize
         #size: _parent.entities[x + 1].dataofs - dataofs
         type:
             switch-on: enttype
@@ -288,12 +289,13 @@ types:
     seq:
       - id: polylink_id
         type: s2
-      - id: origin
-        type: vec3s2
+      #- id: origin
+      #  type: vec3s2
       - id: data
         type: s2
         repeat: expr
-        repeat-expr: 17
+        repeat-expr: 20
+        #repeat-expr: 17
 
   entitydata:
     seq:
@@ -410,15 +412,15 @@ types:
       getdata1:
         io: _root.entitypolylinkdata1._io
         pos: data1offset.x * 2
-        type: entitypolylinkdata1_single_t
+        type: u1
         repeat: expr
-        repeat-expr: data1offset.y - data1offset.x + 1
+        repeat-expr: (data1offset.y - data1offset.x + 1) * 2
       getdata2:
         io: _root.entitypolylinkdata2._io
         pos: data2offset.x * 4
-        type: entitypolylinkdata2_single_t
+        type: u1
         repeat: expr
-        repeat-expr: data2offset.y - data2offset.x + 1
+        repeat-expr: (data2offset.y - data2offset.x + 1) * 4
 
   tabledata1_t:
     seq:
