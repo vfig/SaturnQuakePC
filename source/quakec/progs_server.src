@@ -1,0 +1,45 @@
+#pragma target fte
+
+#define SSQC
+
+#include "definitions.src"
+
+#includelist
+	// shared
+	shared/fteextensions.qc
+	shared/defs.qc
+
+	server/defs.qc
+	server/subs.qc
+	server/fight.qc
+	server/ai.qc
+	server/combat.qc
+	server/items.qc
+	server/weapons.qc
+	server/world.qc
+	server/client.qc
+	server/player.qc
+	server/monsters.qc
+	server/doors.qc
+	server/buttons.qc
+	server/triggers.qc
+	server/plats.qc
+	server/misc.qc
+
+	server/ogre.qc
+	server/demon.qc
+	server/shambler.qc
+	server/knight.qc
+	server/soldier.qc
+	server/wizard.qc
+	server/dog.qc
+	server/zombie.qc
+	server/boss.qc
+
+	server/tarbaby.qc
+	server/hknight.qc
+	server/fish.qc
+	server/shalrath.qc
+	server/enforcer.qc
+	server/oldone.qc
+#endlist

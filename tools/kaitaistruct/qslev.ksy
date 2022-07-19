@@ -276,7 +276,7 @@ types:
             switch-on: enttype
             cases:
               0x92: entity_polymover_t # poly mover
-              _: entity_datablock_t
+              _: entity_datablock_t # generic entity
 
   entity_datablock_t:
     seq:
