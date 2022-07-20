@@ -9,12 +9,14 @@ sys.path.append(os.path.dirname(__file__))
 import kaitaistruct
 from qslev import Qslev
 from powerslavelev import Powerslavelev
+from dukelev import Dukelev
 
 # python modules
 from collections import defaultdict
 from operator import add
 import math
 from enum import Flag
+import numpy
 
 # blender python modules
 import bpy
@@ -61,6 +63,12 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	filter_folder : BoolProperty(name="Filter Folders", description="", default=True, options={'HIDDEN'})
 	filter_glob : StringProperty(default="*.lev", options={'HIDDEN'})
 
+	level_formats = (
+		("QUAKE", "Quake", "Sega Saturn SD Engine (Quake)"),
+		("POWERSLAVE", "PowerSlave (Experimental)", "Sega Saturn SD Engine (PowerSlave)"),
+		("DUKE3D", "Duke Nukem 3D (Experimental)", "Sega Saturn SD Engine (Duke Nukem 3D)")
+	)
+
 	# user controllable properties
 	bExtractTextures : BoolProperty(name="Extract Textures", default=True)
 	bExtractSkyTextures : BoolProperty(name="Extract Sky Textures", default=True)
@@ -70,7 +78,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bFlagPlanes : BoolProperty(name="Generated Flagged Planes", default=False)
 	bGenerateMapFile : BoolProperty(name="Generate .map File", default=False)
 	ImportScale : FloatProperty(name="Import Scale", default=1.0)
-	LevelFormat : EnumProperty(name="Level Format", items=(("QUAKE", "Quake", "Sega Saturn SD Engine (Quake)"), ("POWERSLAVE", "PowerSlave (Experimental)", "Sega Saturn SD Engine (PowerSlave)")), default="POWERSLAVE")
+	LevelFormat : EnumProperty(name="Level Format", items=level_formats, default="QUAKE")
 
 	# debug properties (removeme)
 	debug_planes : BoolProperty(name="DEBUG: show planes with tiles", default=False)
@@ -124,6 +132,50 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 					color = [brightness, brightness, brightness] + [0]
 					mesh.vertex_colors.active.data[vert_loop_index].color = color
 
+		def compute_palette(item, container):
+			palette_entries = []
+
+			for item in container:
+				palette_entries.append([(item.r / 31), (item.g / 31), (item.b / 31), item.a])
+
+			return palette_entries
+
+		def compute_texture(item, imagesize):
+			pixels = []
+
+			for y in range(imagesize[1]):
+				for x in range(imagesize[0]):
+					pos = (y * imagesize[0]) + x
+					pixel = item[pos]
+					pixels.append(pixel[0])
+					pixels.append(pixel[1])
+					pixels.append(pixel[2])
+					pixels.append(pixel[3])
+
+			return pixels
+
+		def compute_texture_paletted(container, imagesize, palette):
+			pixels = []
+
+			for y in range(imagesize[1]):
+				for x in range(imagesize[0]):
+					pos = (y * imagesize[0]) + x
+					pixel = palette[container[pos]]
+					pixels.append(pixel[0])
+					pixels.append(pixel[1])
+					pixels.append(pixel[2])
+					pixels.append(pixel[3])
+
+			return pixels
+
+		def write_png(imagename, imagesize, a, pixel_struct):
+			image = bpy.data.images.new(name=imagename, alpha=a, width=imagesize[0], height=imagesize[1])
+			image.pixels = pixel_struct
+			image.filepath_raw = self.filepath + "." + imagename + ".png"
+			image.file_format = "PNG"
+			image.update()
+			image.save()
+
 		#
 		# defs
 		#
@@ -137,7 +189,27 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 					[-2,-1,-1],		[-1,0,0],		[0,0,0]
 		]
 
-		if self.LevelFormat == "POWERSLAVE": # experimental
+		#
+		# duke nukem 3d (experimental)
+		#
+
+		if self.LevelFormat == "DUKE3D":
+
+			lev = Dukelev.from_file(self.filepath)
+
+			if self.bExtractSkyTextures:
+				palette = compute_palette(lev.PaletteentryT, lev.skydata.palette)
+				palette_pixels = compute_texture(palette, (16, 16))
+				pixels = compute_texture_paletted(lev.skydata.skyimage, (512, 256), palette)
+
+				write_png("sky", (512, 256), True, pixels)
+				write_png("skypalette", (16, 16), True, palette_pixels)
+
+		#
+		# powerslave (experimental)
+		#
+
+		if self.LevelFormat == "POWERSLAVE":
 
 			lev = Powerslavelev.from_file(self.filepath)
 
@@ -220,7 +292,11 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 			scene.collection.objects.link(obj_lev)
 
-		elif self.LevelFormat == "QUAKE": # more robust
+		#
+		# quake
+		#
+
+		if self.LevelFormat == "QUAKE":
 
 			lev = Qslev.from_file(self.filepath)
 
