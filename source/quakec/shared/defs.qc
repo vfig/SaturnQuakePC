@@ -3,24 +3,6 @@
 //
 
 //
-// SHARED DEFINITIONS - ALL MODULES
-//
-
-//
-// QUAKE DEFS
-//
-
-float IT_AXE = 4096;
-float IT_SHOTGUN = 1;
-float IT_SUPER_SHOTGUN = 2;
-float IT_NAILGUN = 4;
-float IT_SUPER_NAILGUN = 8;
-float IT_GRENADE_LAUNCHER = 16;
-float IT_ROCKET_LAUNCHER = 32;
-float IT_LIGHTNING = 64;
-float IT_EXTRA_WEAPON = 128;
-
-//
 // ASPECT RATIO VALUES
 //
 
