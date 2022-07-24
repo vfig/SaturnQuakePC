@@ -212,8 +212,8 @@ class Qslev(KaitaiStruct):
             _pos = io.pos()
             io.seek((self.data1offset.x * 2))
             self._m_getdata1 = []
-            for i in range(((self.data1offset.y - self.data1offset.x) + 1)):
-                self._m_getdata1.append(Qslev.Entitypolylinkdata1SingleT(io, self, self._root))
+            for i in range((((self.data1offset.y - self.data1offset.x) + 1) * 2)):
+                self._m_getdata1.append(io.read_u1())
 
             io.seek(_pos)
             return getattr(self, '_m_getdata1', None)
@@ -227,8 +227,8 @@ class Qslev(KaitaiStruct):
             _pos = io.pos()
             io.seek((self.data2offset.x * 4))
             self._m_getdata2 = []
-            for i in range(((self.data2offset.y - self.data2offset.x) + 1)):
-                self._m_getdata2.append(Qslev.Entitypolylinkdata2SingleT(io, self, self._root))
+            for i in range((((self.data2offset.y - self.data2offset.x) + 1) * 4)):
+                self._m_getdata2.append(io.read_u1())
 
             io.seek(_pos)
             return getattr(self, '_m_getdata2', None)
@@ -294,15 +294,17 @@ class Qslev(KaitaiStruct):
             if hasattr(self, '_m_getentitydata'):
                 return self._m_getentitydata
 
-            io = self._root.entitydata._io
-            _pos = io.pos()
-            io.seek(self.dataofs)
-            _on = self.enttype
-            if _on == 146:
-                self._m_getentitydata = Qslev.EntityPolymoverT(io, self, self._root)
-            else:
-                self._m_getentitydata = Qslev.EntityDatablockT(io, self, self._root)
-            io.seek(_pos)
+            if self.dataofs < self._root.header.entitydatasize:
+                io = self._root.entitydata._io
+                _pos = io.pos()
+                io.seek(self.dataofs)
+                _on = self.enttype
+                if _on == 146:
+                    self._m_getentitydata = Qslev.EntityPolymoverT(io, self, self._root)
+                else:
+                    self._m_getentitydata = Qslev.EntityDatablockT(io, self, self._root)
+                io.seek(_pos)
+
             return getattr(self, '_m_getentitydata', None)
 
 
@@ -411,10 +413,9 @@ class Qslev(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.lead = self._io.read_s2be()
-            self.origin = Qslev.Vec3s2(self._io, self, self._root)
+            self.polylink_id = self._io.read_s2be()
             self.data = []
-            for i in range(17):
+            for i in range(20):
                 self.data.append(self._io.read_s2be())
 
 

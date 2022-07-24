@@ -253,8 +253,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 				lev_verts.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
 				lev_vertcolors.append(vertex.lightlevel)
 
-			for lev.PlaneT in lev.planes:
-				plane = lev.PlaneT
+			for plane in lev.planes:
 				if plane.quadoffsets[0] > -1 and plane.quadoffsets[1] < (lev.header.quadcount + 1):
 					for i in range(plane.quadoffsets[1] - plane.quadoffsets[0] + 1):
 						quad = lev.quads[plane.quadoffsets[0] + i]
@@ -404,9 +403,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 				scene.collection.objects.link(obj)
 
 			if (self.bFlagPlanes):
-				for plane_index, lev.PlaneT in enumerate(lev.planes):
-					plane = lev.PlaneT
-
+				for plane_index, plane in enumerate(lev.planes):
 					if plane.tileindex < lev.header.tileentrycount or plane.quadstartindex < lev.header.quadcount:
 						lev_flaggedplane_verts = []
 						lev_flaggedplane_quads = []
@@ -430,8 +427,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 				return
 
 			# thank you vfig
-			for plane_index, lev.PlaneT in enumerate(lev.planes):
-				plane = lev.PlaneT
+			for plane_index, plane in enumerate(lev.planes):
 				if plane.tileindex < lev.header.tileentrycount:
 					tile = lev.tiles[plane.tileindex]
 					X = Vector(lev_verts[plane.vertices.x])
@@ -515,10 +511,8 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 							lev_quads_flags.append(plane.flags)
 					if self.debug_planes:
 						debug_add_plane_mesh([lev_verts[plane.vertices.x],lev_verts[plane.vertices.y],lev_verts[plane.vertices.z],lev_verts[plane.vertices.a]], f"Plane:{plane_index}, tile:{plane.tileindex}")
-					#lev_quads.append([lev.PlaneT.vertices.x, lev.PlaneT.vertices.y, lev.PlaneT.vertices.z, lev.PlaneT.vertices.a])
 				
-			for lev.PlaneT in lev.planes:
-				plane = lev.PlaneT
+			for plane in lev.planes:
 				if plane.quadstartindex < lev.header.quadcount:
 					for i in range(plane.quadendindex - plane.quadstartindex + 1):
 						quad = lev.quads[plane.quadstartindex + i]
@@ -575,9 +569,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 				shaderfile = open(self.filepath + ".shader", "w")
 
-				for lev.PlaneT in lev.planes:
-					plane = lev.PlaneT
-
+				for plane in lev.planes:
 					if plane.tileindex < lev.header.tileentrycount:
 						tile = lev.tiles[plane.tileindex]
 						width = tile.width
@@ -607,8 +599,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 				numQuads = 0
 
-				for lev.PlaneT in lev.planes:
-					plane = lev.PlaneT
+				for plane in lev.planes:
 					if plane.quadstartindex < lev.header.quadcount:
 						for i in range(plane.quadendindex - plane.quadstartindex + 1):
 							quad = lev.quads[plane.quadstartindex + i]
@@ -758,9 +749,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 				brushNum = 0
 
-				for i, lev.PlaneT in enumerate(lev.planes):
-					plane = lev.PlaneT
-
+				for i, plane in enumerate(lev.planes):
 					normal = Vector([plane.plane.x / 16384, plane.plane.y / 16384, plane.plane.z / 16384])
 					distance = plane.plane.a
 					mod = -normal * distance
