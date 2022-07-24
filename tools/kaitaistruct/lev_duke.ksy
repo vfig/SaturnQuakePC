@@ -16,19 +16,20 @@ seq:
     type: unknown_02_t
   - id: header
     type: header_t
-    size: 56
   - id: sectors
-    size: 28
+    type: sector_t
     repeat: expr
     repeat-expr: header.num_sectors
   - id: planes
     type: plane_t
-    size: 40
     repeat: expr
     repeat-expr: header.num_planes
+  - id: unknown
+    type: unknown_t
+    repeat: expr
+    repeat-expr: header.num_unknown
   - id: vertices
     type: vertex_t
-    size: 8
     repeat: expr
     repeat-expr: header.num_vertices
 
@@ -79,17 +80,26 @@ types:
   header_t:
     seq:
       - id: unknown_01
-        type: u2
-      - id: unknown_02
-        type: u2
+        type: u4
       - id: num_sectors
         type: u4
       - id: num_planes
         type: u4
       - id: num_vertices
         type: u4
+      - id: unknown_03
+        type: u4
+      - id: unknown_04
+        type: u4
+      - id: num_unknown
+        type: u4
+      - id: remaining_data
+        size: 28
+
+  sector_t:
+    seq:
       - id: data
-        size: 40
+        size: 28
 
   plane_t:
     seq:
@@ -97,6 +107,13 @@ types:
         type: u2
         repeat: expr
         repeat-expr: 4
+      - id: remaining_data
+        size: 32
+
+  unknown_t:
+    seq:
+      - id: data
+        size: 44
 
   vertex_t:
     seq:
@@ -104,3 +121,7 @@ types:
         type: u2
         repeat: expr
         repeat-expr: 3
+      - id: color_lookup
+        type: u1
+      - id: filler
+        type: u1
