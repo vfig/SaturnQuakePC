@@ -1,5 +1,5 @@
 meta:
-  id: powerslavelev
+  id: lev_powerslave
   file-extension: lev
   endian: be
   bit-endian: be

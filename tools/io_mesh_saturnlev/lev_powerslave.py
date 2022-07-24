@@ -7,7 +7,7 @@ from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
-class Powerslavelev(KaitaiStruct):
+class LevPowerslave(KaitaiStruct):
     """PowerSlave (Sega Saturn) Level Format (.lev).
     
     .. seealso::
@@ -20,24 +20,24 @@ class Powerslavelev(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.skydata = Powerslavelev.SkydataT(self._io, self, self._root)
+        self.skydata = LevPowerslave.SkydataT(self._io, self, self._root)
         self.unknown01 = self._io.read_bytes(1292)
-        self.header = Powerslavelev.HeaderT(self._io, self, self._root)
+        self.header = LevPowerslave.HeaderT(self._io, self, self._root)
         self.sectors = []
         for i in range(self.header.sectorcount):
-            self.sectors.append(Powerslavelev.SectorT(self._io, self, self._root))
+            self.sectors.append(LevPowerslave.SectorT(self._io, self, self._root))
 
         self.planes = []
         for i in range(self.header.planecount):
-            self.planes.append(Powerslavelev.PlaneT(self._io, self, self._root))
+            self.planes.append(LevPowerslave.PlaneT(self._io, self, self._root))
 
         self.vertices = []
         for i in range(self.header.vertexcount):
-            self.vertices.append(Powerslavelev.VertexT(self._io, self, self._root))
+            self.vertices.append(LevPowerslave.VertexT(self._io, self, self._root))
 
         self.quads = []
         for i in range(self.header.quadcount):
-            self.quads.append(Powerslavelev.QuadT(self._io, self, self._root))
+            self.quads.append(LevPowerslave.QuadT(self._io, self, self._root))
 
 
     class SectorT(KaitaiStruct):
@@ -130,7 +130,7 @@ class Powerslavelev(KaitaiStruct):
         def _read(self):
             self.palette = []
             for i in range(256):
-                self.palette.append(Powerslavelev.PaletteentryT(self._io, self, self._root))
+                self.palette.append(LevPowerslave.PaletteentryT(self._io, self, self._root))
 
             self.skyimage = []
             for i in range((512 * 256)):
