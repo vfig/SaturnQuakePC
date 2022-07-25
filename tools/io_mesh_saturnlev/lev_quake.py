@@ -68,7 +68,7 @@ class LevQuake(KaitaiStruct):
 
         self.table_data_1 = LevQuake.TableData1T(self._io, self, self._root)
         self.global_palette = LevQuake.GlobalPaletteT(self._io, self, self._root)
-        self.texture_data = LevQuake.TextureDataT(self._io, self, self._root)
+        self.resources = LevQuake.ResourcesT(self._io, self, self._root)
 
     class TileTextureDataT(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -146,6 +146,22 @@ class LevQuake(KaitaiStruct):
             self.data = self._io.read_s1()
 
 
+    class SoundT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.type = self._io.read_s2be()
+            self.len_data = self._io.read_s4be()
+            self.data = []
+            for i in range(self.len_data):
+                self.data.append(self._io.read_bits_int_be(8))
+
+
+
     class EntityT(KaitaiStruct):
         def __init__(self, index, _io, _parent=None, _root=None):
             self._io = _io
@@ -175,6 +191,34 @@ class LevQuake(KaitaiStruct):
                 io.seek(_pos)
 
             return getattr(self, '_m_get_entity_data', None)
+
+
+    class ResourcesT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.num_resources = self._io.read_u4be()
+            self.textures = []
+            i = 0
+            while True:
+                _ = LevQuake.TextureT(self._io, self, self._root)
+                self.textures.append(_)
+                if _.type != 130:
+                    break
+                i += 1
+            self.padding = self._io.read_bytes((3084 - 2082))
+            self.sounds = []
+            i = 0
+            while True:
+                _ = LevQuake.SoundT(self._io, self, self._root)
+                self.sounds.append(_)
+                if _.type != 108:
+                    break
+                i += 1
 
 
     class VertexT(KaitaiStruct):
@@ -305,7 +349,7 @@ class LevQuake(KaitaiStruct):
                 self.palette.append(LevQuake.PaletteEntryT(self._io, self, self._root))
 
             self.bitmap = []
-            for i in range(4096):
+            for i in range((64 * 64)):
                 self.bitmap.append(self._io.read_bits_int_be(4))
 
 
@@ -481,25 +525,6 @@ class LevQuake(KaitaiStruct):
 
             io.seek(_pos)
             return getattr(self, '_m_get_tile_texture_data', None)
-
-
-    class TextureDataT(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.count = self._io.read_u4be()
-            self.textures = []
-            i = 0
-            while True:
-                _ = LevQuake.TextureT(self._io, self, self._root)
-                self.textures.append(_)
-                if _.type != 130:
-                    break
-                i += 1
 
 
     class Ent1656(KaitaiStruct):
