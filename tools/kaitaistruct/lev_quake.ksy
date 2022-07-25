@@ -57,22 +57,8 @@ seq:
     size: 128
     repeat: expr
     repeat-expr: header.num_unknown
-  - id: table_data_1_prefix
-    type: table_data_1_prefix_t
-  - id: num_sounds
-    type: u4
-  - id: sounds
-    type: sound_t
-    repeat: expr
-    repeat-expr: num_sounds
-  - id: global_palette
-    type: global_palette_t
-  - id: num_resources
-    type: u4
   - id: resources
-    type: resource_t
-    repeat: expr
-    repeat-expr: num_resources
+    type: resources_t
   - id: unknown0
     type: len_and_unknown_t
   - id: level_name
@@ -338,71 +324,6 @@ types:
         type: u1
         repeat: eos
 
-  # mapped entity size declations
-
-  ent_6:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 6
-
-  ent_10:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 10
-
-  ent_12:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 12
-
-  ent_18:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 18
-
-  ent_24:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 24
-
-  ent_42:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 42
-
-  ent_1656:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 1656
-
-  ent_1614:
-    seq:
-      - id: data
-        type: s1
-        repeat: expr
-        repeat-expr: 1614
-
-  ent_placeholder:
-    seq:
-      - id: data
-        type: s1
-
-  ent_null: {}
-
   # 18 bytes each
   entity_polylink_t:
     seq:
@@ -436,7 +357,30 @@ types:
         repeat: expr
         repeat-expr: (ofs_entity_polylink_data2[1] - ofs_entity_polylink_data2[0] + 1) * 4
 
-  table_data_1_prefix_t:
+  resources_t:
+    seq:
+      - id: prefix
+        type: resources_prefix_t
+      - id: num_sounds
+        type: u4
+      - id: sounds
+        type: sound_t
+        repeat: expr
+        repeat-expr: num_sounds
+      - id: len_palette
+        type: u4
+      - id: palette
+        type: palette_entry_t
+        repeat: expr
+        repeat-expr: len_palette / 2
+      - id: num_resources
+        type: u4
+      - id: resources
+        type: resource_t
+        repeat: expr
+        repeat-expr: num_resources
+
+  resources_prefix_t:
     seq:
       - id: num_values
         type: u4
@@ -458,15 +402,6 @@ types:
       - id: samples       # signed, mono, 11025 Hz PCM
         size: len_samples
 
-  global_palette_t:
-    seq:
-      - id: len_palette
-        type: u4
-      - id: palette
-        type: palette_entry_t
-        repeat: expr
-        repeat-expr: len_palette / 2
-
   resource_t:
     seq:
       - id: flags
@@ -477,10 +412,10 @@ types:
         type:
           switch-on: resource_type
           cases:
-            0x82: texture_t
-            0x34: resource_0x34_t
-            0x6a: resource_0x6a_t
-            0x6c: resource_0x6c_t
+            0x82: texture_t # 130
+            0x34: resource_0x34_t # 52
+            0x6a: resource_0x6a_t # 106
+            0x6c: resource_0x6c_t # 108
 
   texture_t:
     seq:
@@ -497,8 +432,12 @@ types:
     seq:
       - id: unknown0
         type: u2
+      #- id: unknown1
+      #  size: 0x400
       - id: unknown1
-        size: 0x400
+        type: palette_entry_t
+        repeat: expr
+        repeat-expr: 512
 
   resource_0x6a_t:
     seq:

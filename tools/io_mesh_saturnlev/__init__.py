@@ -79,11 +79,14 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	bExtractTextures : BoolProperty(name="Extract Textures", default=True)
 	bExtractPalettes : BoolProperty(name="Extract Texture Palettes", default=False)
 	bExtractSkyTextures : BoolProperty(name="Extract Sky Textures", default=True)
+	bExtractSounds : BoolProperty(name="Extract Sounds", default=True)
+	bExtractRawSounds : BoolProperty(name="Extract Raw Sounds", default=False)
 	bExtractEntities : BoolProperty(name="Extract Entities", default=True)
 	bFixRotation : BoolProperty(name="Fix Rotation", default=True)
 	bImportNodes : BoolProperty(name="Import Node Data", default=False)
 	bFlagPlanes : BoolProperty(name="Generated Flagged Planes", default=False)
 	bGenerateMapFile : BoolProperty(name="Generate .map File", default=False)
+
 	ImportScale : FloatProperty(name="Import Scale", default=1.0)
 	LevelFormat : EnumProperty(name="Level Format", items=level_formats, default="QUAKE")
 
@@ -96,6 +99,8 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 		name = bpy.path.display_name(bpy.path.basename(self.filepath), has_ext=False, title_case=False)
 		scene = bpy.context.scene
+
+		resource_path = self.filepath + "_resources/"
 
 		debug_mat_fix = Matrix.Identity(4)
 
@@ -190,9 +195,12 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 			return pixels
 
 		def write_png(imagename, imagesize, a, pixel_struct):
+			if not os.path.exists(resource_path):
+				os.makedirs(resource_path)
+
 			image = bpy.data.images.new(name=imagename, alpha=a, width=imagesize[0], height=imagesize[1])
 			image.pixels = pixel_struct
-			image.filepath_raw = self.filepath + "." + imagename + ".png"
+			image.filepath_raw = resource_path + imagename + ".png"
 			image.file_format = "PNG"
 			image.update()
 			image.save()
@@ -221,12 +229,12 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 		def link_object(object):
 			scene.collection.objects.link(object)
 
-		def write_material(name):
+		def write_material(name, index):
 			mat = bpy.data.materials.new(name = name)
 			mat.use_nodes = True
 			bsdf = mat.node_tree.nodes["Principled BSDF"]
 			texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-			texImage.image = bpy.data.images.load(self.filepath + f".texture.{tile_textureindex}.png")
+			texImage.image = bpy.data.images.load(f"{resource_path}texture{index:04d}.png")
 			mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
 
 			return mat
@@ -385,7 +393,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 			for lev.VertexT in lev.vertices:
 				vertex = lev.VertexT
-				lev_verts.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
+				lev_vertices.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
 				lev_vertex_colors.append(vertex.lightlevel)
 
 			for plane in lev.planes:
@@ -416,7 +424,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 			obj_lev = bpy.data.objects.new(name, mesh_lev)
 
-			generate_vertex_colors(mesh_lev, lev_saturncolors, lev_vertcolors)
+			generate_vertex_colors(mesh_lev, lev_saturncolors, lev_vertex_colors)
 
 			if self.bFixRotation:
 				obj_lev.scale = [-self.ImportScale, self.ImportScale, self.ImportScale]
@@ -447,6 +455,8 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 			tile = lev.TileT
 			palette_entry = lev.PaletteEntryT
 			entity = lev.EntityT
+			sound = lev.SoundT
+			resource = lev.ResourceT
 
 			for vertex in lev.verts:
 				lev_vertices.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
@@ -536,31 +546,68 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 			obj_lev = add_object(name, mesh_lev)
 
+			if self.bExtractSounds or self.bExtractRawSounds:
+
+				if not os.path.exists(resource_path):
+					os.makedirs(resource_path)
+
+				for i, sound in enumerate(lev.resources.sounds):
+					num_channels = 1
+					samples_per_second = 11025
+					bytes_per_sample = sound.bits//8
+					bytes_per_frame = num_channels*bytes_per_sample
+					num_frames = sound.len_samples//bytes_per_frame
+
+					if self.bExtractSounds:
+						wav_path = f"{resource_path}sound{i:03d}.wav"
+
+						if sound.bits==8:
+							# For 8 bit data, the .wav format only supports unsigned samples, but we
+							# have signed 8 bit samples! So we have to convert them:
+							s8_samples = numpy.frombuffer(sound.samples, dtype='i1')
+							u8_samples = (s8_samples+128).astype('u1')
+							samples = u8_samples.tobytes()
+						elif sound.bits==16:
+							# For 16 bit data, the .wav format only supports little-endian samples,
+							# but we have big-endian. So we have to convert them too!
+							s16be_samples = numpy.frombuffer(sound.samples, dtype='>i2')
+							s16le_samples = s16be_samples.astype('<i2')
+							samples = s16le_samples.tobytes()
+						else:
+							raise ValueError("Expected 8 or 16 bit samples, but found something else!")
+
+						with wave.open(wav_path, "wb") as w:
+							w.setnchannels(num_channels)
+							w.setsampwidth(bytes_per_sample)
+							w.setframerate(samples_per_second)
+							w.setnframes(num_frames)
+							w.writeframes(samples)
+
+					if self.bExtractRawSounds:
+						raw_path = f"{resource_path}sound{i:03d}.raw"
+						with open(raw_path, "wb") as f:
+							f.write(sound.samples)
+
 			if self.bExtractTextures:
-
 				if self.bExtractPalettes:
-					palette = compute_palette(palette_entry, lev.global_palette.palette, False)
+					palette = compute_palette(palette_entry, lev.resources.palette, False)
 					palette_pixels = compute_texture(palette, (16, 16))
-					write_png(f"global_palette", (16, 16), True, palette_pixels)
+					write_png("palette", (16, 16), True, palette_pixels)
 
-					palette_doc = open(self.filepath + ".palette",'w')
-					palette_entries = []
+				numTextures = 0
 
-					for palette_entry in lev.global_palette.palette:
-						palette_entries.append([(palette_entry.r / 31), (palette_entry.g / 31), (palette_entry.b / 31), palette_entry.a])
-						palette_doc.write(f"[{palette_entry.r}, {palette_entry.g}, {palette_entry.b}, {palette_entry.a}]")
-						palette_doc.write("\n")
+				for resource in lev.resources.resources:
+					if resource.resource_type == 130:
+						tex = resource.data
+						palette = compute_palette(palette_entry, tex.palette, False)
+						pixels = compute_texture_paletted(tex.bitmap, (64, 64), palette)
+						write_png(f"texture{numTextures:04d}", (64, 64), True, pixels)
 
-				for i, texture in enumerate(lev.texture_data.textures):
-					if texture.type != 130: break
+						if self.bExtractPalettes:
+							palette_pixels = compute_texture(palette, (16, 1))
+							write_png(f"texture{numTextures:04d}_palette", (16, 1), True, palette_pixels)
 
-					palette = compute_palette(palette_entry, texture.palette)
-					pixels = compute_texture_paletted(texture.bitmap, (64, 64), palette)
-					write_png(f"texture.{i}", (64, 64), True, pixels)
-
-					if self.bExtractPalettes:
-						palette_pixels = compute_texture(palette, (16, 1))
-						write_png(f"texture.{i}.palette", (16, 1), True, palette_pixels)
+						numTextures += 1
 
 				numTiles = 0
 
@@ -576,7 +623,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 								tile_textureindex = tile.get_tile_texture_data[(tile_index * 2) + 1]
 
 								if tile_textureindex not in lev_materials:
-									mat = write_material(name + f"-material-{tile_textureindex}")
+									mat = write_material(f"{name}-material-{tile_textureindex:04d}", tile_textureindex)
 									obj_lev.data.materials.append(mat)
 									lev_materials.append(tile_textureindex)
 
@@ -591,7 +638,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 							quad = lev.quads[plane.quad_start_index + i]
 
 							if quad.texture_index not in lev_materials:
-								mat = write_material(name + f"-material-{quad.texture_index}")
+								mat = write_material(f"{name}-material-{quad.texture_index:04d}", quad.texture_index)
 								obj_lev.data.materials.append(mat)
 								lev_materials.append(quad.texture_index)
 
@@ -599,25 +646,27 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 							numQuads += 1
 
 			if self.bExtractEntities:
-
 				if self.bGenerateMapFile:
 					entities_doc = open(self.filepath + ".map",'w')
 
 				for entNum, entity in enumerate(lev.entities):
-					ent_type = f"Entity {entNum}: " + match_entity(entity.ent_type)
+					ent_type = f"Entity {entNum}: {match_entity(entity.ent_type)}"
 
-					if self.bFixRotation:
-						entloc = [
-							-entity.get_entity_data.origin.x * self.ImportScale,
-							-entity.get_entity_data.origin.z * self.ImportScale,
-							entity.get_entity_data.origin.y * self.ImportScale
-						]
+					if match_entity(entity.ent_type) != "misc_polymover" and entity.get_entity_data != None:
+						if self.bFixRotation:
+							entloc = [
+								-entity.get_entity_data.coords[0] * self.ImportScale,
+								-entity.get_entity_data.coords[1] * self.ImportScale,
+								entity.get_entity_data.coords[2] * self.ImportScale
+							]
+						else:
+							entloc = [
+								entity.get_entity_data.coords[0] * self.ImportScale,
+								entity.get_entity_data.coords[1] * self.ImportScale,
+								entity.get_entity_data.coords[2] * self.ImportScale
+							]
 					else:
-						entloc = [
-							entity.get_entity_data.origin.x * self.ImportScale,
-							entity.get_entity_data.origin.y * self.ImportScale,
-							entity.get_entity_data.origin.z * self.ImportScale
-						]
+						entloc = [0, 0, 0]
 
 					empty_ent = bpy.data.objects.new(ent_type, None)
 					empty_ent.location = entloc
