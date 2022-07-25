@@ -57,8 +57,14 @@ seq:
     size: 128
     repeat: expr
     repeat-expr: header.num_unknown
-  - id: table_data_1
-    type: table_data_1_t
+  - id: table_data_1_prefix
+    type: table_data_1_prefix_t
+  - id: num_sounds
+    type: u4
+  - id: sounds
+    type: sound_t
+    repeat: expr
+    repeat-expr: num_sounds
   - id: global_palette
     type: global_palette_t
   - id: num_resources
@@ -430,17 +436,6 @@ types:
         repeat: expr
         repeat-expr: (ofs_entity_polylink_data2[1] - ofs_entity_polylink_data2[0] + 1) * 4
 
-  table_data_1_t:
-    seq:
-      - id: prefix
-        type: table_data_1_prefix_t
-      - id: num_blocks
-        type: s4
-      - id: blocks
-        type: table_data_1_block_t
-        repeat: expr
-        repeat-expr: num_blocks
-
   table_data_1_prefix_t:
     seq:
       - id: num_values
@@ -450,18 +445,18 @@ types:
         repeat: expr
         repeat-expr: num_values
 
-  table_data_1_block_t:
+  sound_t:
     seq:
-      - id: len_block
+      - id: len_samples
         type: s4
       - id: attribute_02
         type: s4
-      - id: attribute_03
+      - id: bits          # 8 or 16 (bits per sample)
         type: s4
       - id: attribute_04
         type: s4
-      - id: block
-        size: len_block
+      - id: samples       # signed, mono, 11025 Hz PCM
+        size: len_samples
 
   global_palette_t:
     seq:
