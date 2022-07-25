@@ -1,5 +1,5 @@
 meta:
-  id: powerslavezed
+  id: lev_powerslave_psx
   file-extension: zed
   endian: le
   bit-endian: le

@@ -61,8 +61,26 @@ seq:
     type: table_data_1_t
   - id: global_palette
     type: global_palette_t
+  - id: num_resources
+    type: u4
   - id: resources
-    type: resources_t
+    type: resource_t
+    repeat: expr
+    repeat-expr: num_resources
+  - id: unknown0
+    type: len_and_unknown_t
+  - id: level_name
+    type: str
+    size: 32
+    encoding: ASCII
+  - id: unknown1
+    type: u4
+    repeat: expr
+    repeat-expr: 9
+  - id: unknown2
+    type: len_and_unknown_t
+  - id: unknown3
+    type: len_and_unknown_t
 
 types:
   # 131104 bytes
@@ -454,38 +472,23 @@ types:
         repeat: expr
         repeat-expr: len_palette / 2
 
-  resources_t:
-    seq:
-    - id: num_resources
-      type: u4
-    - id: textures
-      type: texture_t
-      repeat: until
-      repeat-until: _.type != 130
-    - id: padding
-      size: 3084 - 2082
-    - id: sounds
-      type: sound_t
-      repeat: until
-      repeat-until: _.type != 108
-
-  sound_t:
-    seq:
-      - id: type
-        type: s2
-      - id: len_data
-        type: s4
-      - id: data
-        type: b8
-        repeat: expr
-        repeat-expr: len_data
-
-  texture_t:
+  resource_t:
     seq:
       - id: flags
         type: u1
-      - id: type
+      - id: resource_type
         type: u1
+      - id: data
+        type:
+          switch-on: resource_type
+          cases:
+            0x82: texture_t
+            0x34: resource_0x34_t
+            0x6a: resource_0x6a_t
+            0x6c: resource_0x6c_t
+
+  texture_t:
+    seq:
       - id: palette
         type: palette_entry_t
         repeat: expr
@@ -494,3 +497,35 @@ types:
         type: b4
         repeat: expr
         repeat-expr: 64 * 64
+
+  resource_0x34_t:
+    seq:
+      - id: unknown0
+        type: u2
+      - id: unknown1
+        size: 0x400
+
+  resource_0x6a_t:
+    seq:
+      - id: unknown0
+        type: u2
+      - id: len_data
+        type: u2
+      - id: data
+        size: len_data
+
+  resource_0x6c_t:
+    seq:
+      - id: unknown0
+        type: u2
+      - id: len_data
+        type: u2
+      - id: data
+        size: len_data
+
+  len_and_unknown_t:
+    seq:
+    - id: len_data
+      type: u4
+    - id: data
+      size: len_data
