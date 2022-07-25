@@ -68,11 +68,19 @@ seq:
     repeat: expr
     repeat-expr: num_resources
   - id: unknown0
-    type: unknown0_t
+    type: len_and_unknown_t
   - id: level_name
     type: str
     size: 32
     encoding: ASCII
+  - id: unknown1
+    type: u4
+    repeat: expr
+    repeat-expr: 9
+  - id: unknown2
+    type: len_and_unknown_t
+  - id: unknown3
+    type: len_and_unknown_t
 
 types:
   # 131104 bytes
@@ -515,7 +523,7 @@ types:
       - id: data
         size: len_data
 
-  unknown0_t:
+  len_and_unknown_t:
     seq:
     - id: len_data
       type: u4
