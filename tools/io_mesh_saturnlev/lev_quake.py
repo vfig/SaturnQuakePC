@@ -68,7 +68,13 @@ class LevQuake(KaitaiStruct):
 
         self.table_data_1 = LevQuake.TableData1T(self._io, self, self._root)
         self.global_palette = LevQuake.GlobalPaletteT(self._io, self, self._root)
-        self.resources = LevQuake.ResourcesT(self._io, self, self._root)
+        self.num_resources = self._io.read_u4be()
+        self.resources = []
+        for i in range(self.num_resources):
+            self.resources.append(LevQuake.ResourceT(self._io, self, self._root))
+
+        self.unknown0 = LevQuake.Unknown0T(self._io, self, self._root)
+        self.level_name = (self._io.read_bytes(32)).decode(u"ASCII")
 
     class TileTextureDataT(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -104,6 +110,19 @@ class LevQuake(KaitaiStruct):
 
         def _read(self):
             self.data = self._io.read_bytes(self._parent.header.len_entity_data)
+
+
+    class Resource0x6cT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.unknown0 = self._io.read_u2be()
+            self.len_data = self._io.read_u2be()
+            self.data = self._io.read_bytes(self.len_data)
 
 
     class GlobalPaletteT(KaitaiStruct):
@@ -146,22 +165,6 @@ class LevQuake(KaitaiStruct):
             self.data = self._io.read_s1()
 
 
-    class SoundT(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.type = self._io.read_s2be()
-            self.len_data = self._io.read_s4be()
-            self.data = []
-            for i in range(self.len_data):
-                self.data.append(self._io.read_bits_int_be(8))
-
-
-
     class EntityT(KaitaiStruct):
         def __init__(self, index, _io, _parent=None, _root=None):
             self._io = _io
@@ -191,34 +194,6 @@ class LevQuake(KaitaiStruct):
                 io.seek(_pos)
 
             return getattr(self, '_m_get_entity_data', None)
-
-
-    class ResourcesT(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.num_resources = self._io.read_u4be()
-            self.textures = []
-            i = 0
-            while True:
-                _ = LevQuake.TextureT(self._io, self, self._root)
-                self.textures.append(_)
-                if _.type != 130:
-                    break
-                i += 1
-            self.padding = self._io.read_bytes((3084 - 2082))
-            self.sounds = []
-            i = 0
-            while True:
-                _ = LevQuake.SoundT(self._io, self, self._root)
-                self.sounds.append(_)
-                if _.type != 108:
-                    break
-                i += 1
 
 
     class VertexT(KaitaiStruct):
@@ -290,6 +265,18 @@ class LevQuake(KaitaiStruct):
 
 
 
+    class Resource0x34T(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.unknown0 = self._io.read_u2be()
+            self.unknown1 = self._io.read_bytes(1024)
+
+
     class EntityPolymoverT(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -342,8 +329,6 @@ class LevQuake(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.flags = self._io.read_u1()
-            self.type = self._io.read_u1()
             self.palette = []
             for i in range(16):
                 self.palette.append(LevQuake.PaletteEntryT(self._io, self, self._root))
@@ -440,6 +425,27 @@ class LevQuake(KaitaiStruct):
 
 
 
+    class ResourceT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.flags = self._io.read_u1()
+            self.resource_type = self._io.read_u1()
+            _on = self.resource_type
+            if _on == 130:
+                self.data = LevQuake.TextureT(self._io, self, self._root)
+            elif _on == 52:
+                self.data = LevQuake.Resource0x34T(self._io, self, self._root)
+            elif _on == 106:
+                self.data = LevQuake.Resource0x6aT(self._io, self, self._root)
+            elif _on == 108:
+                self.data = LevQuake.Resource0x6cT(self._io, self, self._root)
+
+
     class Ent18(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -525,6 +531,18 @@ class LevQuake(KaitaiStruct):
 
             io.seek(_pos)
             return getattr(self, '_m_get_tile_texture_data', None)
+
+
+    class Unknown0T(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.len_data = self._io.read_u4be()
+            self.data = self._io.read_bytes(self.len_data)
 
 
     class Ent1656(KaitaiStruct):
@@ -692,6 +710,19 @@ class LevQuake(KaitaiStruct):
             for i in range(self.num_values):
                 self.values.append(self._io.read_s2be())
 
+
+
+    class Resource0x6aT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.unknown0 = self._io.read_u2be()
+            self.len_data = self._io.read_u2be()
+            self.data = self._io.read_bytes(self.len_data)
 
 
     class SkyDataT(KaitaiStruct):
