@@ -61,8 +61,8 @@ seq:
     type: table_data_1_t
   - id: global_palette
     type: global_palette_t
-  - id: texture_data
-    type: texture_data_t
+  - id: resources
+    type: resources_t
 
 types:
   # 131104 bytes
@@ -454,19 +454,31 @@ types:
         repeat: expr
         repeat-expr: len_palette / 2
 
-  texture_data_t:
+  resources_t:
     seq:
-      - id: count
-        type: u4
-      - id: textures
-        type: texture_t
-        repeat: until
-        repeat-until: _.type != 130
-        #repeat: expr
-        #repeat-expr: 58 # this is wrong!
-        # TITLE.LEV has 58 textures but the raw 'count' is 0x52 (82)
-        # E1L1.LEV has 120 textures but the raw 'count' is 0x93 (147)
-        # i dont know how to automatically determine number of textures yet!
+    - id: num_resources
+      type: u4
+    - id: textures
+      type: texture_t
+      repeat: until
+      repeat-until: _.type != 130
+    - id: padding
+      size: 3084 - 2082
+    - id: sounds
+      type: sound_t
+      repeat: until
+      repeat-until: _.type != 108
+
+  sound_t:
+    seq:
+      - id: type
+        type: s2
+      - id: len_data
+        type: s4
+      - id: data
+        type: b8
+        repeat: expr
+        repeat-expr: len_data
 
   texture_t:
     seq:
@@ -481,4 +493,4 @@ types:
       - id: bitmap
         type: b4
         repeat: expr
-        repeat-expr: 4096
+        repeat-expr: 64 * 64

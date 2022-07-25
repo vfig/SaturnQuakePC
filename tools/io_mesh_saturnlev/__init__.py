@@ -10,6 +10,7 @@ import kaitaistruct
 from lev_quake import LevQuake
 from lev_powerslave import LevPowerslave
 from lev_duke import LevDuke
+from dat_skank import DatSkank
 
 # python modules
 from collections import defaultdict
@@ -17,6 +18,7 @@ from operator import add
 import math
 from enum import Flag
 import numpy
+import wave
 
 # blender python modules
 import bpy
@@ -92,7 +94,7 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 	def execute(self, context):
 		print("Reading %s..." % self.filepath)
 
-		name = bpy.path.basename(self.filepath)
+		name = bpy.path.display_name(bpy.path.basename(self.filepath), has_ext=False, title_case=False)
 		scene = bpy.context.scene
 
 		debug_mat_fix = Matrix.Identity(4)
@@ -137,11 +139,25 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 					color = [brightness, brightness, brightness] + [0]
 					mesh.vertex_colors.active.data[vert_loop_index].color = color
 
-		def compute_palette(item, container):
+		def compute_palette(item, container, bFixTransparency):
 			palette_entries = []
 
-			for item in container:
-				palette_entries.append([(item.r / 31), (item.g / 31), (item.b / 31), item.a])
+			for i, item in enumerate(container):
+				if bFixTransparency and i == 255:
+					palette_entries.append([(item.r / 31), (item.g / 31), (item.b / 31), False])
+				else:
+					palette_entries.append([(item.r / 31), (item.g / 31), (item.b / 31), item.a])
+
+			return palette_entries
+
+		def compute_quake_palette(item, container):
+			palette_entries = []
+
+			for i, item in enumerate(container):
+				if i == 255:
+					palette_entries.append([(item[0] / 255), (item[1] / 255), (item[2] / 255), False])
+				else:
+					palette_entries.append([(item[0] / 255), (item[1] / 255), (item[2] / 255), item.a])
 
 			return palette_entries
 
@@ -252,6 +268,43 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 					[-2,-1,-1],		[-1,0,0],		[0,0,0]
 		]
 
+		lev_quakepalette = [
+			[0, 0, 0, False], [2, 2, 2, True], [4, 4, 4, True], [6, 6, 6, True], [8, 8, 8, True], [9, 9, 9, True], [11, 11, 11, True], [13, 13, 13, True], [15, 15, 15, True], [17, 17, 17, True], [19, 19, 19, True], [21, 21, 21, True], [23, 23, 23, True], [25, 25, 25, True], [27, 27, 27, True], [29, 29, 29, True],
+			[2, 1, 1, True], [3, 2, 1, True], [4, 3, 1, True], [5, 3, 2, True], [6, 4, 2, True], [7, 5, 3, True], [8, 6, 3, True], [9, 7, 3, True], [10, 7, 3, True], [11, 8, 4, True], [12, 9, 4, True], [13, 10, 4, True], [14, 11, 4, True], [15, 12, 4, True], [16, 13, 4, True], [17, 13, 4, True],
+			[1, 1, 2, True], [2, 2, 3, True], [3, 3, 5, True], [5, 5, 6, True], [6, 6, 8, True], [7, 7, 9, True], [8, 8, 11, True], [9, 9, 13, True], [10, 10, 14, True], [11, 11, 15, True], [12, 12, 17, True], [13, 13, 18, True], [14, 14, 20, True], [15, 15, 21, True], [16, 16, 23, True], [17, 17, 25, True],
+			[0, 0, 0, True], [1, 1, 0, True], [1, 1, 0, True], [2, 2, 0, True], [3, 3, 0, True], [4, 4, 0, True], [5, 5, 1, True], [6, 6, 1, True], [7, 7, 1, True], [8, 8, 1, True], [9, 9, 1, True], [9, 9, 1, True], [10, 10, 1, True], [11, 11, 1, True], [12, 12, 1, True], [13, 13, 2, True],
+			[1, 0, 0, True], [2, 0, 0, True], [3, 0, 0, True], [4, 0, 0, True], [5, 0, 0, True], [6, 0, 0, True], [7, 0, 0, True], [8, 0, 0, True], [9, 0, 0, True], [10, 0, 0, True], [11, 0, 0, True], [12, 0, 0, True], [13, 0, 0, True], [13, 0, 0, True], [14, 0, 0, True], [15, 0, 0, True],
+			[2, 2, 0, True], [3, 3, 0, True], [4, 4, 0, True], [6, 5, 0, True], [7, 6, 0, True], [8, 7, 0, True], [9, 7, 1, True], [11, 8, 1, True], [12, 9, 1, True], [13, 9, 1, True], [14, 10, 2, True], [16, 11, 2, True], [17, 11, 2, True], [18, 12, 3, True], [20, 12, 4, True], [21, 13, 4, True],
+			[4, 2, 1, True], [6, 3, 1, True], [7, 4, 2, True], [9, 4, 2, True], [11, 5, 3, True], [12, 6, 4, True], [14, 7, 4, True], [15, 7, 5, True], [17, 8, 6, True], [19, 10, 6, True], [21, 12, 6, True], [23, 14, 6, True], [25, 17, 5, True], [27, 21, 5, True], [29, 25, 4, True], [31, 30, 3, True],
+			[1, 1, 0, True], [3, 2, 0, True], [5, 4, 2, True], [7, 5, 2, True], [9, 6, 3, True], [10, 7, 4, True], [12, 8, 5, True], [13, 9, 6, True], [15, 10, 8, True], [17, 12, 9, True], [19, 13, 10, True], [20, 15, 12, True], [22, 16, 13, True], [24, 18, 15, True], [26, 20, 17, True], [28, 22, 18, True],
+			[21, 17, 20, True], [19, 15, 18, True], [18, 14, 16, True], [17, 13, 15, True], [15, 11, 13, True], [14, 10, 12, True], [13, 9, 11, True], [12, 8, 9, True], [11, 7, 8, True], [9, 6, 7, True], [8, 5, 6, True], [7, 4, 4, True], [5, 3, 3, True], [4, 2, 2, True], [3, 1, 1, True], [2, 1, 1, True],
+			[23, 14, 19, True], [21, 13, 17, True], [20, 12, 16, True], [18, 11, 14, True], [17, 10, 13, True], [15, 9, 12, True], [14, 8, 10, True], [13, 7, 9, True], [12, 6, 8, True], [10, 5, 7, True], [9, 4, 5, True], [7, 4, 4, True], [6, 3, 3, True], [4, 2, 2, True], [3, 1, 1, True], [2, 1, 1, True],
+			[27, 24, 23, True], [25, 22, 20, True], [23, 20, 19, True], [21, 18, 17, True], [20, 16, 15, True], [18, 15, 13, True], [16, 13, 12, True], [15, 12, 10, True], [13, 11, 9, True], [12, 9, 7, True], [10, 8, 6, True], [8, 6, 5, True], [7, 5, 4, True], [5, 4, 3, True], [3, 2, 2, True], [2, 1, 1, True],
+			[13, 16, 15, True], [13, 15, 13, True], [12, 14, 13, True], [11, 13, 12, True], [10, 12, 11, True], [9, 11, 10, True], [8, 10, 9, True], [7, 9, 8, True], [6, 8, 7, True], [5, 7, 6, True], [4, 6, 5, True], [4, 5, 4, True], [3, 4, 3, True], [2, 3, 2, True], [1, 2, 1, True], [1, 1, 1, True],
+			[31, 30, 3, True], [29, 27, 3, True], [27, 25, 2, True], [25, 22, 2, True], [23, 20, 2, True], [21, 18, 1, True], [19, 16, 1, True], [17, 14, 1, True], [15, 12, 1, True], [13, 10, 0, True], [11, 9, 0, True], [9, 7, 0, True], [7, 5, 0, True], [5, 4, 0, True], [3, 2, 0, True], [1, 1, 0, True],
+			[0, 0, 31, True], [1, 1, 29, True], [2, 2, 27, True], [3, 3, 25, True], [4, 4, 23, True], [5, 5, 21, True], [6, 6, 19, True], [6, 6, 17, True], [6, 6, 15, True], [6, 6, 13, True], [6, 6, 12, True], [5, 5, 10, True], [4, 4, 8, True], [3, 3, 6, True], [2, 2, 4, True], [1, 1, 2, True],
+			[5, 0, 0, True], [7, 0, 0, True], [9, 1, 0, True], [12, 1, 0, True], [13, 2, 0, True], [15, 3, 1, True], [18, 4, 1, True], [20, 5, 1, True], [22, 6, 2, True], [24, 9, 3, True], [25, 12, 5, True], [27, 15, 7, True], [28, 18, 10, True], [28, 21, 12, True], [29, 23, 14, True], [30, 26, 17, True],
+			[20, 15, 7, True], [22, 19, 7, True], [24, 24, 7, True], [28, 28, 11, True], [15, 23, 31, True], [21, 28, 31, True], [26, 31, 31, True], [13, 0, 0, True], [17, 0, 0, True], [22, 0, 0, True], [26, 0, 0, True], [31, 0, 0, True], [31, 30, 18, True], [31, 30, 24, True], [31, 31, 31, True], [0, 0, 0, True]
+		]
+
+		#
+		# skank.dat
+		#
+
+		print(lev_quakepalette[2][0])
+
+		if name == "skank.dat" or name == "SKANK.DAT":
+
+			dat = DatSkank.from_file(self.filepath)
+
+			pixel = dat.BitmapEntryT
+
+			for i, pixel in enumerate(dat.bitmaps):
+				pixels = compute_texture(compute_palette(pixel, dat.bitmaps[i].bitmap, False), (dat.header.width, dat.header.height))
+				write_png(f"bitmap.{i}", (dat.header.width, dat.header.height), True, pixels)
+
+			return {'FINISHED'}
+
 		#
 		# duke nukem 3d (experimental)
 		#
@@ -260,28 +313,30 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 
 			lev = LevDuke.from_file(self.filepath)
 
-			#sector = lev.SectorT
 			vertex = lev.VertexT
 			plane = lev.PlaneT
+			palette_entry = lev.PaletteEntryT
 
-			lev_verts = []
+			lev_vertices = []
 			lev_quads = []
 
 			if self.bExtractSkyTextures:
-				palette = compute_palette(lev.PaletteEntryT, lev.sky_data.palette)
-				palette_pixels = compute_texture(palette, (16, 16))
-				pixels = compute_texture_paletted(lev.sky_data.bitmap, (512, 256), palette)
+				palette = compute_palette(palette_entry, lev.sky_data.palette, True)
+				pixels = compute_texture_paletted(lev.sky_data.bitmap, (lev.sky_data.width, lev.sky_data.height), palette)
 
-				write_png("sky", (512, 256), True, pixels)
-				write_png("skypalette", (16, 16), True, palette_pixels)
+				write_png("sky", (lev.sky_data.width, lev.sky_data.height), True, pixels)
+
+				if self.bExtractPalettes:
+					palette_pixels = compute_texture(palette, (16, 16))
+					write_png("skypalette", (16, 16), True, palette_pixels)
 
 			for vertex in lev.vertices:
-				lev_verts.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
+				lev_vertices.append([vertex.coords[0], vertex.coords[1], vertex.coords[2]])
 
 			for plane in lev.planes:
 				lev_quads.append([plane.vertex_indices[0], plane.vertex_indices[1], plane.vertex_indices[2], plane.vertex_indices[3]])
 
-			mesh_lev = add_mesh(name, lev_verts, [], [])
+			mesh_lev = add_mesh(name, lev_vertices, [], lev_quads)
 			obj_lev = add_object(name, mesh_lev)
 
 			calc_object_rotation_scale(obj_lev)
@@ -482,6 +537,20 @@ class ImportLEV(bpy.types.Operator, ImportHelper):
 			obj_lev = add_object(name, mesh_lev)
 
 			if self.bExtractTextures:
+
+				if self.bExtractPalettes:
+					palette = compute_palette(palette_entry, lev.global_palette.palette, False)
+					palette_pixels = compute_texture(palette, (16, 16))
+					write_png(f"global_palette", (16, 16), True, palette_pixels)
+
+					palette_doc = open(self.filepath + ".palette",'w')
+					palette_entries = []
+
+					for palette_entry in lev.global_palette.palette:
+						palette_entries.append([(palette_entry.r / 31), (palette_entry.g / 31), (palette_entry.b / 31), palette_entry.a])
+						palette_doc.write(f"[{palette_entry.r}, {palette_entry.g}, {palette_entry.b}, {palette_entry.a}]")
+						palette_doc.write("\n")
+
 				for i, texture in enumerate(lev.texture_data.textures):
 					if texture.type != 130: break
 

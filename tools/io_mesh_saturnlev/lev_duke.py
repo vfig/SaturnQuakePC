@@ -19,26 +19,33 @@ class LevDuke(KaitaiStruct):
         self.sky_data = LevDuke.SkyDataT(self._io, self, self._root)
         self.unknown_01 = self._io.read_bytes(1280)
         self.unknown_02 = LevDuke.Unknown02T(self._io, self, self._root)
-        self._raw_header = self._io.read_bytes(56)
-        _io__raw_header = KaitaiStream(BytesIO(self._raw_header))
-        self.header = LevDuke.HeaderT(_io__raw_header, self, self._root)
+        self.header = LevDuke.HeaderT(self._io, self, self._root)
         self.sectors = []
         for i in range(self.header.num_sectors):
-            self.sectors.append(self._io.read_bytes(28))
+            self.sectors.append(LevDuke.SectorT(self._io, self, self._root))
 
-        self._raw_planes = []
         self.planes = []
         for i in range(self.header.num_planes):
-            self._raw_planes.append(self._io.read_bytes(40))
-            _io__raw_planes = KaitaiStream(BytesIO(self._raw_planes[i]))
-            self.planes.append(LevDuke.PlaneT(_io__raw_planes, self, self._root))
+            self.planes.append(LevDuke.PlaneT(self._io, self, self._root))
 
-        self._raw_vertices = []
+        self.unknown = []
+        for i in range(self.header.num_unknown):
+            self.unknown.append(LevDuke.UnknownT(self._io, self, self._root))
+
         self.vertices = []
         for i in range(self.header.num_vertices):
-            self._raw_vertices.append(self._io.read_bytes(8))
-            _io__raw_vertices = KaitaiStream(BytesIO(self._raw_vertices[i]))
-            self.vertices.append(LevDuke.VertexT(_io__raw_vertices, self, self._root))
+            self.vertices.append(LevDuke.VertexT(self._io, self, self._root))
+
+
+    class SectorT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.data = self._io.read_bytes(28)
 
 
     class Unknown02T(KaitaiStruct):
@@ -68,6 +75,8 @@ class LevDuke(KaitaiStruct):
             for i in range(3):
                 self.coords.append(self._io.read_u2be())
 
+            self.color_lookup = self._io.read_u1()
+            self.filler = self._io.read_u1()
 
 
     class HeaderT(KaitaiStruct):
@@ -78,12 +87,14 @@ class LevDuke(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.unknown_01 = self._io.read_u2be()
-            self.unknown_02 = self._io.read_u2be()
+            self.unknown_01 = self._io.read_u4be()
             self.num_sectors = self._io.read_u4be()
             self.num_planes = self._io.read_u4be()
             self.num_vertices = self._io.read_u4be()
-            self.data = self._io.read_bytes(40)
+            self.unknown_03 = self._io.read_u4be()
+            self.unknown_04 = self._io.read_u4be()
+            self.num_unknown = self._io.read_u4be()
+            self.remaining_data = self._io.read_bytes(28)
 
 
     class PaletteEntryT(KaitaiStruct):
@@ -98,6 +109,17 @@ class LevDuke(KaitaiStruct):
             self.b = self._io.read_bits_int_be(5)
             self.g = self._io.read_bits_int_be(5)
             self.r = self._io.read_bits_int_be(5)
+
+
+    class UnknownT(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.data = self._io.read_bytes(44)
 
 
     class Unknown02BlockT(KaitaiStruct):
@@ -124,6 +146,7 @@ class LevDuke(KaitaiStruct):
             for i in range(4):
                 self.vertex_indices.append(self._io.read_u2be())
 
+            self.remaining_data = self._io.read_bytes(32)
 
 
     class SkyDataT(KaitaiStruct):
